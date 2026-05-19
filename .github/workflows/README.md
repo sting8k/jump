@@ -22,7 +22,7 @@ flowchart LR
 
 ### 1. PR phase
 
-Three workflows run when a PR targets `main`:
+These workflows and external checks run when a PR targets `main`:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
@@ -30,6 +30,7 @@ Three workflows run when a PR targets `main`:
 | `pr-build.yml` | `pull_request` | Snapshot build via GoReleaser, upload artifacts, post install comment |
 | `pr-title.yml` | `pull_request_target` | Validate PR title matches [conventional commits](https://www.conventionalcommits.org/) |
 | `regen.yml` | `pull_request` | No-op for non-`release/next` PRs; reports a status check so branch protection stays green |
+| Greptile GitHub App | `pull_request` | External AI review/status check configured by `.greptile/`; staged as non-required until release-PR skip behavior is verified |
 
 Commit prefixes determine release behavior:
 - `feat: ...` → minor version bump, **Features** section
@@ -76,6 +77,21 @@ To edit prose for an upcoming release: open the `release/next` PR and edit the b
 ## Branch protection
 
 Branch protection on `main` should require the `regen / regen` status check. The `regen.yml` workflow always reports the check (passing as a no-op for non-`release/next` PRs and for the workflow's own force-pushes), so the requirement doesn't break unrelated PRs. For the release PR specifically, the check ensures `changelog.mdx` and the PR body are in sync with both the latest prose and the latest commits on `main` before the merge button works.
+
+Greptile is configured in `.greptile/` to post a GitHub status check for normal PRs, review only the initial PR open event, and skip generated `release: ...` PRs from `github-actions[bot]`. Keep Greptile **non-required** during staged rollout until a test `release/next` cycle proves skipped release PRs still produce a green/skipped status check. If skipped release PRs do not produce a mergeable check, either allow Greptile to review `release/next` or leave Greptile non-required for release flow.
+
+### Greptile staged rollout checklist
+
+Use this checklist before adding Greptile to required branch-protection checks:
+
+1. Confirm the repository is enabled in the Greptile dashboard and the GitHub App has access to this repo.
+2. Open a normal PR that targets `main`; do not push directly to `main`, because Greptile reviews PRs.
+3. Confirm Greptile posts a review status check from `.greptile/config.json` (`statusCheck: true`).
+4. Merge the normal PR after existing required checks pass.
+5. Let `regen.yml` create or update `release/next`.
+6. Confirm the generated `release/next` PR is still mergeable while Greptile is configured to skip `github-actions[bot]` / `release:` PRs.
+7. Only after both PR types are mergeable should Greptile be added as a required status check.
+8. If `release/next` is blocked because the required Greptile check is missing, remove Greptile from required checks or change `.greptile/config.json` to allow Greptile to review release PRs.
 
 `Require branches to be up to date before merging` is **not** needed: the regen workflow runs on every push to `main` and force-syncs `release/next` automatically, so by construction the head SHA always reflects current `main`.
 
@@ -134,7 +150,7 @@ These settings should be configured in the GitHub repository:
 
 1. **Settings → Actions → General → Workflow permissions**: select **"Read repository contents and packages permissions"** (least-privilege default for all workflows).
 2. **Settings → Environments**: create a `release` environment with deployment branches restricted to `main`. Move `DISCORD_WEBHOOK_URL` there if release notifications are enabled.
-3. **Settings → Branches → main → Branch protection**: require the `regen / regen` status check. Don't enable "require branches to be up to date before merging."
+3. **Settings → Branches → main → Branch protection**: require the `regen / regen` status check. During Greptile staged rollout, observe its status check on normal PRs and on a generated `release/next` PR before adding it as required. Don't enable "require branches to be up to date before merging."
 
 ## Scripts
 

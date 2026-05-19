@@ -1,0 +1,31 @@
+{
+  "strictness": 2,
+  "commentTypes": ["logic", "syntax"],
+  "triggerOnUpdates": false,
+  "statusCheck": true,
+  "statusCommentsEnabled": true,
+  "updateExistingSummaryComment": true,
+  "fileChangeLimit": 200,
+  "excludeAuthors": ["github-actions[bot]"],
+  "ignoreKeywords": "release:",
+  "ignorePatterns": "**/node_modules/**\napps/jump-web/dist/**\nservices/jumpd/cmd/jumpd/web/assets/**\nservices/jumpd/cmd/jumpd/web/index.html\nservices/jumpd/cmd/jumpd/web/manifest.json\nservices/jumpd/cmd/jumpd/web/favicon.svg\nbin/**\ncoverage/**\ntest-results/**\nplaywright-report/**\n**/*.tsbuildinfo",
+  "instructions": "Review Jump as a browser-first session manager with a Harness v0 operating model. Prioritize correctness, regressions, release safety, and validation gaps over style nits. For user-visible behavior, check that story docs and docs/TEST_MATRIX.md stay current. For build/release changes, verify web __JUMP_VERSION__, Go main.version, and GoReleaser version stamping remain consistent.",
+  "rules": [
+    {
+      "id": "harness-docs-current",
+      "rule": "When a change alters user-visible behavior, validation expectations, architecture constraints, or release flow, flag missing updates to the relevant docs, story packet, or docs/TEST_MATRIX.md.",
+      "severity": "medium"
+    },
+    {
+      "id": "minimal-systemic-change",
+      "rule": "Flag broad refactors, unrelated formatting churn, or one-off patches when a smaller design-aligned fix would solve the issue.",
+      "severity": "medium"
+    },
+    {
+      "id": "version-stamping-consistency",
+      "rule": "For build or release changes, verify frontend and backend versions are stamped from the same intended source and that local overrides remain possible.",
+      "scope": ["scripts/**", ".github/**", ".goreleaser.yml", "package.json", "apps/jump-web/**", "cli/jump/**", "services/jumpd/**"],
+      "severity": "high"
+    }
+  ]
+}

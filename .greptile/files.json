@@ -1,0 +1,27 @@
+{
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "description": "Repository operating guide and source-of-truth order for agents and reviewers."
+    },
+    {
+      "path": "docs/FEATURE_INTAKE.md",
+      "description": "Risk lanes and documentation expectations for new work."
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "description": "Architecture boundaries and runtime ownership for Jump.",
+      "scope": ["apps/**", "cli/**", "packages/**", "services/**", "docs/stories/**"]
+    },
+    {
+      "path": "docs/TEST_MATRIX.md",
+      "description": "Validation evidence matrix for product behavior and stories.",
+      "scope": ["apps/**", "cli/**", "packages/**", "services/**", "docs/**"]
+    },
+    {
+      "path": ".github/workflows/README.md",
+      "description": "PR, release, branch protection, and Greptile rollout expectations.",
+      "scope": [".github/**", "scripts/**", ".goreleaser.yml", "package.json"]
+    }
+  ]
+}
