@@ -3,6 +3,7 @@ import type { DiscoveredProject, ProjectItem } from './types'
 import { makeSession } from './test-helpers'
 import {
   buildWorkspaceSuggestions,
+  findWorkspaceSuggestionByPath,
   fsCompletionSuggestions,
   hasProjectPath,
   recentWorkspaceSuggestions,
@@ -93,6 +94,28 @@ describe('workspace suggestions', () => {
     expect(suggestions[0]).toMatchObject({
       path: '~/Documents/Develope/pi-agent-ext/pi-droid-styling',
       remote: 'github.com/sting8k/pi-droid-styling',
+    })
+  })
+
+  it('finds an exact path suggestion after Tab completion so remote metadata survives add', () => {
+    const discovered: DiscoveredProject[] = [{
+      suggested_slug: 'remote-app',
+      remote: 'github.com/sting8k/remote-app',
+      paths: ['~/src/remote-app'],
+      session_count: 1,
+      active_count: 1,
+    }]
+
+    const suggestions = buildWorkspaceSuggestions({
+      sessionItems: [],
+      configured: [],
+      discoveredItems: discovered,
+      query: '~/src/remote-app',
+    })
+
+    expect(findWorkspaceSuggestionByPath(suggestions, '~/src/remote-app/')).toMatchObject({
+      path: '~/src/remote-app',
+      remote: 'github.com/sting8k/remote-app',
     })
   })
 })

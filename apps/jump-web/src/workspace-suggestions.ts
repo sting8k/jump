@@ -130,6 +130,14 @@ interface WorkspaceSuggestionInput {
   query: string
 }
 
+export function findWorkspaceSuggestionByPath(
+  items: WorkspaceSuggestion[],
+  path: string,
+): WorkspaceSuggestion | undefined {
+  const clean = cleanWorkspacePath(path)
+  return items.find(s => cleanWorkspacePath(s.path) === clean)
+}
+
 export function buildWorkspaceSuggestions({
   fsSuggestions = [],
   sessionItems,

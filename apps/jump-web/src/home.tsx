@@ -10,6 +10,7 @@ import { launchersForPeer } from './launcher'
 import {
   buildWorkspaceSuggestions,
   cleanWorkspacePath,
+  findWorkspaceSuggestionByPath,
   fsCompletionSuggestions,
   hasProjectPath,
   isWorkspacePath,
@@ -131,6 +132,9 @@ function HomeWorkspaceAdd() {
     }).slice(0, 8)
     : []
   const topSuggestion = suggestions[0]
+  const exactPathSuggestion = pathLike
+    ? findWorkspaceSuggestionByPath(suggestions, path)
+    : undefined
   const readySuggestion = pathLike ? undefined : topSuggestion
   const canAdd = !adding && query !== '' && !duplicate && (pathLike || Boolean(topSuggestion))
 
@@ -162,7 +166,7 @@ function HomeWorkspaceAdd() {
   }, [path, pathLike, duplicate])
 
   const handleAdd = async () => {
-    const selected = pathLike ? undefined : topSuggestion
+    const selected = pathLike ? exactPathSuggestion : topSuggestion
     const addPath = pathLike ? path : selected?.path
     if (!addPath) {
       setError('No matching workspace yet. Type a path or a recent project name.')
