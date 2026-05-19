@@ -2,37 +2,24 @@
 // Reads shared data from the store (signals).
 
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { addProject, removeProject, health, peers, folders, sessions, launchers as launchersSignal, defaultLauncher as defaultLauncherSignal, launchSession } from './store'
+import { addProject, removeProject, health, peers, folders, sessions, projects, discovered, launchers as launchersSignal, defaultLauncher as defaultLauncherSignal, launchSession } from './store'
 import { PeerLabel } from './peer-label'
 import { IconFolder, IconPlay, IconTrash } from './icons'
 import type { Folder, LauncherDef } from './types'
 import { launchersForPeer } from './launcher'
+import {
+  buildWorkspaceSuggestions,
+  cleanWorkspacePath,
+  fsCompletionSuggestions,
+  hasProjectPath,
+  isWorkspacePath,
+  workspaceName,
+  type WorkspaceSuggestion,
+} from './workspace-suggestions'
 
 /** Strip protocol and trailing slash for display: "https://foo.bar/" → "foo.bar" */
 function displayHost(url: string): string {
   return url.replace(/^https?:\/\//, '').replace(/\/+$/, '')
-}
-
-interface FSCompletion {
-  name: string
-  path: string
-}
-
-function cleanWorkspacePath(input: string): string {
-  const path = input.trim()
-  if (path === '~' || path === '/') return path
-  return path.replace(/\/+$/, '')
-}
-
-function isWorkspacePath(path: string): boolean {
-  return path === '~' || path.startsWith('~/') || path.startsWith('/')
-}
-
-function workspaceName(path: string): string {
-  const clean = cleanWorkspacePath(path)
-  if (clean === '~') return 'home'
-  const parts = clean.split('/').filter(Boolean)
-  return parts[parts.length - 1] || 'workspace'
 }
 
 export function Home() {
@@ -127,16 +114,29 @@ export function Home() {
 function HomeWorkspaceAdd() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [input, setInput] = useState('')
-  const [suggestions, setSuggestions] = useState<FSCompletion[]>([])
+  const [fsSuggestions, setFsSuggestions] = useState<WorkspaceSuggestion[]>([])
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
+  const query = input.trim()
   const path = cleanWorkspacePath(input)
   const pathLike = isWorkspacePath(path)
-  const duplicate = pathLike && folders.value.some(f => cleanWorkspacePath(f.launchCwd || '') === path)
+  const duplicate = pathLike && hasProjectPath(projects.value, path)
+  const suggestions = query
+    ? buildWorkspaceSuggestions({
+      fsSuggestions,
+      sessionItems: sessions.value,
+      configured: projects.value,
+      discoveredItems: discovered.value,
+      query: input,
+    }).slice(0, 8)
+    : []
+  const topSuggestion = suggestions[0]
+  const readySuggestion = pathLike ? undefined : topSuggestion
+  const canAdd = !adding && query !== '' && !duplicate && (pathLike || Boolean(topSuggestion))
 
   useEffect(() => {
     if (!pathLike || duplicate) {
-      setSuggestions([])
+      setFsSuggestions([])
       return
     }
 
@@ -145,13 +145,13 @@ function HomeWorkspaceAdd() {
       try {
         const resp = await fetch(`/v1/fs/complete?path=${encodeURIComponent(path)}`, { signal: controller.signal })
         if (!resp.ok) {
-          setSuggestions([])
+          setFsSuggestions([])
           return
         }
         const json = await resp.json()
-        setSuggestions(json?.data ?? [])
+        setFsSuggestions(fsCompletionSuggestions(json?.data ?? []))
       } catch {
-        if (!controller.signal.aborted) setSuggestions([])
+        if (!controller.signal.aborted) setFsSuggestions([])
       }
     }, 180)
 
@@ -162,11 +162,13 @@ function HomeWorkspaceAdd() {
   }, [path, pathLike, duplicate])
 
   const handleAdd = async () => {
-    if (!pathLike) {
-      setError('Use an absolute path like ~/src/app or /Users/me/app')
+    const selected = pathLike ? undefined : topSuggestion
+    const addPath = pathLike ? path : selected?.path
+    if (!addPath) {
+      setError('No matching workspace yet. Type a path or a recent project name.')
       return
     }
-    if (duplicate) {
+    if (hasProjectPath(projects.value, addPath)) {
       setError('Workspace already exists')
       return
     }
@@ -174,9 +176,9 @@ function HomeWorkspaceAdd() {
     setAdding(true)
     setError('')
     try {
-      await addProject({ paths: [path] })
+      await addProject(selected?.remote ? { remote: selected.remote, paths: [addPath] } : { paths: [addPath] })
       setInput('')
-      setSuggestions([])
+      setFsSuggestions([])
     } finally {
       setAdding(false)
     }
@@ -198,16 +200,23 @@ function HomeWorkspaceAdd() {
           placeholder="Add workspace dir, e.g. ~/src/project"
           value={input}
           onInput={e => { setInput((e.target as HTMLInputElement).value); setError('') }}
-          onKeyDown={e => { if (e.key === 'Enter') void handleAdd() }}
+          onKeyDown={e => {
+            if (e.key === 'Tab' && suggestions[0]) {
+              e.preventDefault()
+              selectSuggestion(suggestions[0].path)
+              return
+            }
+            if (e.key === 'Enter') void handleAdd()
+          }}
         />
-        <button class="home-workspace-add-btn" disabled={adding || !pathLike || duplicate} onClick={() => void handleAdd()}>
+        <button class="home-workspace-add-btn" disabled={!canAdd} onClick={() => void handleAdd()}>
           {adding ? 'Adding…' : 'Add'}
         </button>
       </div>
-      {pathLike && (
+      {(pathLike || readySuggestion) && (
         <div class={`home-workspace-preview${duplicate ? ' duplicate' : ''}`}>
-          {duplicate ? 'Already added' : `Ready: ${workspaceName(path)}`}
-          <span>{path}</span>
+          {duplicate ? 'Already added' : `Ready: ${pathLike ? workspaceName(path) : readySuggestion?.name}`}
+          <span>{pathLike ? path : readySuggestion?.path}</span>
         </div>
       )}
       {error && <div class="home-workspace-error">{error}</div>}

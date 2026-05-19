@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { projects, discovered, sessions, removeProject, addProject, updateProjects } from './store'
-import type { ProjectItem, DiscoveredProject, MatchRule, Session } from './types'
+import type { ProjectItem, MatchRule } from './types'
 import { IconFolder, IconPlus, IconTrash } from './icons'
+import {
+  buildWorkspaceSuggestions,
+  cleanWorkspacePath,
+  fsCompletionSuggestions,
+  hasProjectPath,
+  isWorkspacePath,
+  shortenPath,
+  workspaceName,
+  type FSCompletion,
+  type WorkspaceSuggestion,
+} from './workspace-suggestions'
 
 // ── Rule description ──
 
@@ -36,23 +47,6 @@ function describeRule(rule: MatchRule): RuleDescription {
   return { label: '(empty rule)', qualifier: '' }
 }
 
-// ── Workspace suggestions ──
-
-interface WorkspaceSuggestion {
-  key: string
-  name: string
-  path: string
-  remote?: string
-  detail: string
-  source: 'active' | 'recent' | 'discovered' | 'fs'
-  activeCount: number
-}
-
-interface FSCompletion {
-  name: string
-  path: string
-}
-
 // ── Drag-to-reorder ──
 
 /** State tracked during a drag operation. */
@@ -61,70 +55,6 @@ interface DragState {
   from: number
   /** Current insertion target (visual feedback). */
   over: number
-}
-
-function cleanWorkspacePath(input: string): string {
-  const path = input.trim()
-  if (path === '~' || path === '/') return path
-  return path.replace(/\/+$/, '')
-}
-
-function isWorkspacePath(path: string): boolean {
-  return path === '~' || path.startsWith('~/') || path.startsWith('/')
-}
-
-function workspaceName(path: string): string {
-  const clean = cleanWorkspacePath(path)
-  if (clean === '~') return 'home'
-  const parts = clean.split('/').filter(Boolean)
-  return parts[parts.length - 1] || clean.replace(/[^a-zA-Z0-9_-]+/g, '-') || 'workspace'
-}
-
-function hasProjectPath(items: ProjectItem[], path: string): boolean {
-  const clean = cleanWorkspacePath(path)
-  return items.some(project => project.match.some(rule => rule.path && cleanWorkspacePath(rule.path) === clean))
-}
-
-function recentWorkspaceSuggestions(sessionItems: Session[], configured: ProjectItem[]): WorkspaceSuggestion[] {
-  const seen = new Set<string>()
-  const result: WorkspaceSuggestion[] = []
-  const recent = [...sessionItems]
-    .filter(s => s.cwd || s.workspace_root)
-    .sort((a, b) => new Date(b.created_at || b.started_at || 0).getTime() - new Date(a.created_at || a.started_at || 0).getTime())
-
-  for (const session of recent) {
-    const path = cleanWorkspacePath(session.workspace_root || session.cwd)
-    if (!isWorkspacePath(path) || seen.has(path) || hasProjectPath(configured, path)) continue
-    seen.add(path)
-    result.push({
-      key: `recent:${path}`,
-      name: workspaceName(path),
-      path,
-      detail: session.peer ? `${shortenPath(path)} on ${session.peer}` : shortenPath(path),
-      source: session.alive ? 'active' : 'recent',
-      activeCount: session.alive ? 1 : 0,
-    })
-    if (result.length >= 5) break
-  }
-
-  return result
-}
-
-function discoveredSuggestions(items: DiscoveredProject[], configured: ProjectItem[]): WorkspaceSuggestion[] {
-  return items
-    .map(d => {
-      const path = cleanWorkspacePath(d.paths[0] || '')
-      return {
-        key: `discovered:${d.suggested_slug}`,
-        name: d.suggested_slug,
-        path,
-        remote: d.remote,
-        detail: d.remote || shortenPath(path),
-        source: d.active_count > 0 ? 'active' as const : 'discovered' as const,
-        activeCount: d.active_count,
-      }
-    })
-    .filter(s => s.path && !hasProjectPath(configured, s.path))
 }
 
 // ── ManageProjectsModal ──
@@ -185,14 +115,7 @@ export function ManageProjectsModal({
         }
         const json = await resp.json()
         const data: FSCompletion[] = json?.data ?? []
-        setFsSuggestions(data.map(item => ({
-          key: `fs:${item.path}`,
-          name: item.name,
-          path: item.path,
-          detail: item.path,
-          source: 'fs',
-          activeCount: 0,
-        })))
+        setFsSuggestions(fsCompletionSuggestions(data))
       } catch {
         if (!controller.signal.aborted) setFsSuggestions([])
       }
@@ -205,30 +128,14 @@ export function ManageProjectsModal({
   }, [open, filterIsPath, duplicatePath, inputPath])
 
   const suggestions = useMemo(() => {
-    const all = [
-      ...fsSuggestions,
-      ...recentWorkspaceSuggestions(sessionVal, configured),
-      ...discoveredSuggestions(discoveredVal, configured),
-    ]
-    const seen = new Set<string>()
-    const unique = all.filter(s => {
-      if (seen.has(s.path)) return false
-      seen.add(s.path)
-      return true
+    return buildWorkspaceSuggestions({
+      fsSuggestions,
+      sessionItems: sessionVal,
+      configured,
+      discoveredItems: discoveredVal,
+      query: filter,
     })
-
-    const sorted = unique.sort((a, b) => {
-      const rank = (s: WorkspaceSuggestion) => s.source === 'fs' ? 0 : s.source === 'active' ? 1 : s.source === 'recent' ? 2 : 3
-      return rank(a) - rank(b) || b.activeCount - a.activeCount || a.name.localeCompare(b.name)
-    })
-
-    if (!lowerFilter) return sorted
-    return sorted.filter(s =>
-      s.name.toLowerCase().includes(lowerFilter)
-      || s.path.toLowerCase().includes(lowerFilter)
-      || s.detail.toLowerCase().includes(lowerFilter),
-    )
-  }, [fsSuggestions, sessionVal, configured, discoveredVal, lowerFilter])
+  }, [fsSuggestions, sessionVal, configured, discoveredVal, filter])
 
   const topSuggestions = suggestions.slice(0, lowerFilter ? 12 : 8)
 
@@ -286,8 +193,13 @@ export function ManageProjectsModal({
   }, [inputPath, duplicatePath])
 
   const handleFilterKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Tab' && topSuggestions[0]) {
+      e.preventDefault()
+      handleUseSuggestion(topSuggestions[0])
+      return
+    }
     if (e.key === 'Enter' && filterIsPath && !duplicatePath) handleManualAdd()
-  }, [filterIsPath, duplicatePath, handleManualAdd])
+  }, [filterIsPath, duplicatePath, handleManualAdd, handleUseSuggestion, topSuggestions])
 
   if (!open) return null
 
@@ -500,10 +412,6 @@ function SuggestionRow({
 }
 
 // ── Helpers ──
-
-function shortenPath(p: string): string {
-  return p.replace(/^\/home\/[^/]+/, '~')
-}
 
 /** Reorder an array by moving item at `from` to position `to`. */
 function reorder<T>(arr: T[], from: number, to: number): T[] {
