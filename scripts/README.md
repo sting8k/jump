@@ -4,7 +4,7 @@ This directory contains project automation used by CI, E2E tests, and local deve
 
 ## Current Scripts
 
-- `build.sh` builds the protocol package, builds the web app, syncs `apps/jump-web/dist` into the embedded `jumpd` web directory, then writes `bin/jump` and `bin/jumpd`. Set `VERSION` to stamp non-dev binaries.
+- `build.sh` builds the protocol package, builds the web app, syncs `apps/jump-web/dist` into the embedded `jumpd` web directory, then writes `bin/jump` and `bin/jumpd`. It stamps binaries and web assets from the latest `v*` git tag by default, falling back to the root `package.json` version when tags are unavailable; set `VERSION` to override it.
 - `dev-kill.sh` is a best-effort pre-dev cleanup that stops an existing `jumpd` daemon via `bin/jumpd` or `jumpd` on `PATH`; it does not kill arbitrary processes.
 
 ## Installer
