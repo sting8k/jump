@@ -5,6 +5,7 @@ import { IconFolder, IconPlus, IconTrash } from './icons'
 import {
   buildWorkspaceSuggestions,
   cleanWorkspacePath,
+  findWorkspaceSuggestionByPath,
   fsCompletionSuggestions,
   hasProjectPath,
   isWorkspacePath,
@@ -138,6 +139,9 @@ export function ManageProjectsModal({
   }, [fsSuggestions, sessionVal, configured, discoveredVal, filter])
 
   const topSuggestions = suggestions.slice(0, lowerFilter ? 12 : 8)
+  const exactPathSuggestion = filterIsPath
+    ? findWorkspaceSuggestionByPath(suggestions, inputPath)
+    : undefined
 
   // ── Reorder handlers ──
 
@@ -188,9 +192,13 @@ export function ManageProjectsModal({
       return
     }
     setManualError('')
-    addProject({ paths: [path] })
+    addProject(
+      exactPathSuggestion?.remote
+        ? { remote: exactPathSuggestion.remote, paths: [path] }
+        : { paths: [path] },
+    )
     setFilter('')
-  }, [inputPath, duplicatePath])
+  }, [inputPath, duplicatePath, exactPathSuggestion])
 
   const handleFilterKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Tab' && topSuggestions[0]) {
