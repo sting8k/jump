@@ -118,4 +118,29 @@ describe('workspace suggestions', () => {
       remote: 'github.com/sting8k/remote-app',
     })
   })
+
+  it('keeps discovered remote metadata when filesystem completion has the same path', () => {
+    const suggestions = buildWorkspaceSuggestions({
+      fsSuggestions: fsCompletionSuggestions([
+        { name: 'remote-app', path: '~/src/remote-app' },
+      ]),
+      sessionItems: [],
+      configured: [],
+      discoveredItems: [{
+        suggested_slug: 'remote-app',
+        remote: 'github.com/sting8k/remote-app',
+        paths: ['~/src/remote-app'],
+        session_count: 1,
+        active_count: 1,
+      }],
+      query: '~/src/remote-app',
+    })
+
+    expect(suggestions).toHaveLength(1)
+    expect(suggestions[0]).toMatchObject({
+      source: 'fs',
+      path: '~/src/remote-app',
+      remote: 'github.com/sting8k/remote-app',
+    })
+  })
 })

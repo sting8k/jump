@@ -153,14 +153,21 @@ export function buildWorkspaceSuggestions({
     ...recentWorkspaceSuggestions(sessionItems, configured),
     ...discoveredSuggestions(discoveredItems, configured),
   ]
-  const seen = new Set<string>()
-  const unique = all.filter(s => {
-    const path = cleanWorkspacePath(s.path)
-    if (!path || seen.has(path)) return false
-    seen.add(path)
-    s.path = path
-    return true
-  })
+  const byPath = new Map<string, WorkspaceSuggestion>()
+  for (const suggestion of all) {
+    const path = cleanWorkspacePath(suggestion.path)
+    if (!path) continue
+
+    const existing = byPath.get(path)
+    const next = { ...suggestion, path }
+    if (!existing) {
+      byPath.set(path, next)
+      continue
+    }
+
+    mergeWorkspaceSuggestion(existing, next)
+  }
+  const unique = [...byPath.values()]
 
   if (!lowerQuery) return sortDefault(unique)
 
@@ -177,6 +184,19 @@ export function buildWorkspaceSuggestions({
     })
 
   return scored.map(item => item.suggestion)
+}
+
+function mergeWorkspaceSuggestion(target: WorkspaceSuggestion, source: WorkspaceSuggestion): void {
+  if (!target.remote && source.remote) target.remote = source.remote
+  target.activeCount = Math.max(target.activeCount, source.activeCount)
+  target.sessionCount = maxOptional(target.sessionCount, source.sessionCount)
+  target.lastSeenAt = maxOptional(target.lastSeenAt, source.lastSeenAt)
+}
+
+function maxOptional(a: number | undefined, b: number | undefined): number | undefined {
+  if (a === undefined) return b
+  if (b === undefined) return a
+  return Math.max(a, b)
 }
 
 function sortDefault(items: WorkspaceSuggestion[]): WorkspaceSuggestion[] {
