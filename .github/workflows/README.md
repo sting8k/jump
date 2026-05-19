@@ -92,6 +92,7 @@ Use this checklist before adding Greptile to required branch-protection checks:
 6. Confirm the generated `release/next` PR is still mergeable while Greptile is configured to skip `github-actions[bot]` / `release:` PRs.
 7. Only after both PR types are mergeable should Greptile be added as a required status check.
 8. If `release/next` is blocked because the required Greptile check is missing, remove Greptile from required checks or change `.greptile/config.json` to allow Greptile to review release PRs.
+9. If no Greptile check or comment appears after commenting `@greptileai`, verify the repo is enabled at app.greptile.com/review/github and wait for first-time indexing to finish.
 
 `Require branches to be up to date before merging` is **not** needed: the regen workflow runs on every push to `main` and force-syncs `release/next` automatically, so by construction the head SHA always reflects current `main`.
 
