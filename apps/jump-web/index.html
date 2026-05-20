@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="default">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -7,6 +7,20 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
     <title>jump</title>
+    <script>
+      (() => {
+        try {
+          const raw = localStorage.getItem('jump:appearance')
+          const parsed = raw ? JSON.parse(raw) : null
+          const themeId = typeof parsed?.theme_id === 'string' && /^[a-z0-9][a-z0-9_-]{0,39}$/.test(parsed.theme_id)
+            ? parsed.theme_id
+            : 'default'
+          document.documentElement.dataset.theme = themeId
+        } catch {
+          document.documentElement.dataset.theme = 'default'
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

@@ -19,7 +19,15 @@ import type { View } from './routing'
 import { resolveViewFromPath, viewToPath, sessionPath } from './routing'
 import { buildProjectFolders, matchSession } from './projects'
 
-import { fetchFrontendConfig, buildTerminalOptions, resolveKeybinds, type ResolvedKeybind } from './config'
+import { fetchFrontendConfig, saveFrontendPreferences, buildTerminalOptions, resolveKeybinds, type ResolvedKeybind } from './config'
+import {
+  DEFAULT_APPEARANCE,
+  applyAppearance,
+  normalizeAppearance,
+  readCachedAppearance,
+  writeCachedAppearance,
+  type AppearancePreferences,
+} from './appearance'
 import { addPageResumeListener } from './page-resume'
 import { MOCK_SESSIONS, MOCK_PROJECTS } from './mock-data/index'
 import type { ResolvedTerminalOptions } from './settings-schema'
@@ -110,6 +118,33 @@ export const peerAppearance = computed<ReadonlyMap<string, PeerAppearance>>(() =
 export const terminalOptions = signal<ResolvedTerminalOptions | null>(null)
 export const keybinds = signal<ResolvedKeybind[] | null>(null)
 export const macCommandIsCtrl = signal(false)
+export const appearance = signal<AppearancePreferences>(DEFAULT_APPEARANCE)
+
+let appearanceSaveSeq = 0
+let appearanceSaveAbort: AbortController | null = null
+
+function commitAppearance(next: AppearancePreferences): void {
+  appearance.value = next
+  writeCachedAppearance(next)
+  applyAppearance(next)
+}
+
+export function setThemeId(themeId: string): Promise<void> {
+  const next = normalizeAppearance({ theme_id: themeId })
+  commitAppearance(next)
+  appearanceSaveAbort?.abort()
+  const controller = typeof AbortController === 'undefined' ? null : new AbortController()
+  appearanceSaveAbort = controller
+  const seq = ++appearanceSaveSeq
+  return saveFrontendPreferences(next, controller?.signal).catch(err => {
+    if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') return
+    if (seq === appearanceSaveSeq) {
+      console.error('Failed to save appearance preferences:', err)
+    }
+  }).finally(() => {
+    if (seq === appearanceSaveSeq) appearanceSaveAbort = null
+  })
+}
 
 /** Current URL path, kept in sync with preact-iso's location. */
 export const urlPath = signal(
@@ -632,6 +667,7 @@ export function navigateToSession(sessionId: string, replace?: boolean): boolean
  */
 export function initStore(): () => void {
   const cleanups: (() => void)[] = []
+  commitAppearance(readCachedAppearance())
 
   if (USE_MOCK) {
     const localHost = new URLSearchParams(location.search).get('host')
@@ -670,6 +706,7 @@ export function initStore(): () => void {
   cleanups.push(startHealthRefresh())
   fetchFrontendConfig().then(fc => {
     const macCtrl = fc.settings?.macCommandIsCtrl === true
+    if (fc.appearance) commitAppearance(fc.appearance)
     batch(() => {
       terminalOptions.value = buildTerminalOptions(fc.settings, fc.themeColors)
       macCommandIsCtrl.value = macCtrl

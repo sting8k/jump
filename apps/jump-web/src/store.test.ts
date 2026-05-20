@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { sessions, sessionsLoaded, projects, upsertSession, removeSession, markSessionRead, handleActivity, isSessionActive, isSessionFading, activityMap, sessionStaleness, peers, peerAppearance, urlPath, selectedId, navigateToSession, setNavigate, launchSession, removeProject, health, startHealthRefresh, HEALTH_REFRESH_MS, HEALTH_REFRESH_SETTLE_MS } from './store'
+import { sessions, sessionsLoaded, projects, upsertSession, removeSession, markSessionRead, handleActivity, isSessionActive, isSessionFading, activityMap, sessionStaleness, peers, peerAppearance, urlPath, selectedId, navigateToSession, setNavigate, launchSession, removeProject, health, startHealthRefresh, HEALTH_REFRESH_MS, HEALTH_REFRESH_SETTLE_MS, appearance, setThemeId, initStore } from './store'
+import { APPEARANCE_STORAGE_KEY } from './appearance'
 import type { Session } from './types'
 import type { ProjectItem } from './types'
 
@@ -25,6 +26,18 @@ function makeSession(overrides: Partial<Session> & { id: string }): Session {
   }
 }
 
+class MemoryStorage {
+  private items = new Map<string, string>()
+
+  getItem(key: string): string | null {
+    return this.items.get(key) ?? null
+  }
+
+  setItem(key: string, value: string): void {
+    this.items.set(key, value)
+  }
+}
+
 // Reset signal state between tests.
 beforeEach(() => {
   sessions.value = []
@@ -32,6 +45,7 @@ beforeEach(() => {
   sessionsLoaded.value = false
   urlPath.value = '/'
   health.value = null
+  appearance.value = { themeId: 'default' }
 })
 
 describe('upsertSession', () => {
@@ -150,6 +164,59 @@ describe('project mutations', () => {
 
     expect(fetch).toHaveBeenCalledWith('/v1/projects', expect.objectContaining({ method: 'PUT' }))
     expect(projects.value.map(p => p.slug)).toEqual(['fxproj'])
+  })
+})
+
+describe('appearance preferences', () => {
+  beforeEach(() => { vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true })) })
+  afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+  it('applies theme locally and saves it to the server', async () => {
+    await setThemeId('spacetime')
+
+    expect(appearance.value).toEqual({ themeId: 'spacetime' })
+    expect(fetch).toHaveBeenCalledWith('/v1/frontend-preferences', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ appearance: { theme_id: 'spacetime' } }),
+    }))
+  })
+
+  it('keeps the cached theme when frontend config fetch fails', async () => {
+    vi.useFakeTimers()
+    const doc = new EventTarget() as Document
+    Object.defineProperty(doc, 'documentElement', { value: { dataset: {}, style: {} } })
+    Object.defineProperty(doc, 'querySelector', { value: () => null })
+    Object.defineProperty(doc, 'visibilityState', { configurable: true, value: 'visible' })
+    vi.stubGlobal('document', doc)
+    vi.stubGlobal('window', new EventTarget())
+    class FakeEventSource extends EventTarget {
+      constructor(public url: string) { super() }
+      close() {}
+    }
+    vi.stubGlobal('EventSource', FakeEventSource)
+
+    const storage = new MemoryStorage()
+    storage.setItem(APPEARANCE_STORAGE_KEY, '{"theme_id":"spacetime"}')
+    vi.stubGlobal('localStorage', storage)
+
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/v1/frontend-config') return { ok: false, json: async () => ({}) }
+      if (url === '/v1/projects') return { ok: true, json: async () => ({ ok: true, data: { configured: [], discovered: [], unmatched_active_count: 0 } }) }
+      if (url === '/v1/sessions') return { ok: true, json: async () => ({ data: [] }) }
+      if (url === '/v1/health') return { ok: true, json: async () => ({ data: null }) }
+      if (url === '/v1/session-metrics') return { ok: false, json: async () => ({}) }
+      return { ok: true, json: async () => ({}) }
+    }))
+
+    const cleanup = initStore()
+    await Promise.resolve()
+    await Promise.resolve()
+    cleanup()
+    vi.useRealTimers()
+
+    expect(appearance.value).toEqual({ themeId: 'spacetime' })
+    expect(storage.getItem(APPEARANCE_STORAGE_KEY)).toBe('{"theme_id":"spacetime"}')
   })
 })
 

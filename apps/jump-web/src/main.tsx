@@ -21,6 +21,7 @@ import { installCopySession } from './mock-data/export-session'
 import { isCoarsePointerDevice } from './input-device'
 import { fetchHostActions, requestDisplaySleep, type DisplaySleepCapability } from './host-actions'
 import { releaseUpdateBadge } from './release-updates'
+import { ThemeMenuOptions } from './theme-switcher'
 import {
   TERMINAL_FONT_SIZE_MAX,
   TERMINAL_FONT_SIZE_MIN,
@@ -119,8 +120,15 @@ function MainHeader({ session, terminalFontSize, onTerminalFontSizeChange, onRes
   if (!session) {
     return (
       <div class="main-header">
-        <div class="main-header-title" style={{ color: 'var(--text-muted)' }}>
+        <div class="main-header-title">
           jump
+        </div>
+        <div class="main-header-right">
+          <SessionMenu
+            session={null}
+            terminalFontSize={terminalFontSize}
+            onTerminalFontSizeChange={onTerminalFontSizeChange}
+          />
         </div>
       </div>
     )
@@ -172,7 +180,7 @@ function MainHeader({ session, terminalFontSize, onTerminalFontSizeChange, onRes
 }
 
 function SessionMenu({ session, terminalFontSize, onTerminalFontSizeChange, onRestart }: {
-  session: Session
+  session: Session | null
   terminalFontSize: number
   onTerminalFontSizeChange: (delta: number) => void
   onRestart?: () => void
@@ -186,13 +194,13 @@ function SessionMenu({ session, terminalFontSize, onTerminalFontSizeChange, onRe
   // For remote sessions, compare against the peer's version (not the local
   // daemon's). Peers don't expose runner_hash, so only version comparison
   // is possible for remote sessions.
-  const peerVersion = session.peer
+  const peerVersion = session?.peer
     ? peers.value.find(p => p.name === session.peer)?.version
     : undefined
-  const compareTarget = session.peer
-    ? (peerVersion ? { version: peerVersion } : null)
-    : healthVal
-  const staleKind = sessionStaleness(session, compareTarget)
+  const compareTarget = session
+    ? (session.peer ? (peerVersion ? { version: peerVersion } : null) : healthVal)
+    : null
+  const staleKind = session ? sessionStaleness(session, compareTarget) : null
   const updateBadge = releaseUpdateBadge(healthVal?.update_available)
   const triggerHasBadge = !!staleKind || !!updateBadge
 
@@ -239,13 +247,15 @@ function SessionMenu({ session, terminalFontSize, onTerminalFontSizeChange, onRe
     }
   }
 
-  const versionDisplay = session.runner_version
-    ? `v${session.runner_version}`
-    : session.binary_hash
-      ? session.binary_hash.slice(0, 8)
-      : 'unknown'
+  const versionDisplay = session
+    ? session.runner_version
+      ? `v${session.runner_version}`
+      : session.binary_hash
+        ? session.binary_hash.slice(0, 8)
+        : 'unknown'
+    : ''
 
-  const hasActions = session.alive && onRestart
+  const hasActions = !!session?.alive && !!onRestart
   const displaySleepDisabled = !displaySleep?.available
     || displaySleepRequestState === 'checking'
     || displaySleepRequestState === 'requesting'
@@ -257,7 +267,7 @@ function SessionMenu({ session, terminalFontSize, onTerminalFontSizeChange, onRe
       <button
         class={`session-menu-trigger${triggerHasBadge ? ' stale' : ''}`}
         onClick={() => setOpen(!open)}
-        title={updateBadge ? `${updateBadge.label} — Session actions` : 'Session actions'}
+        title={updateBadge ? `${updateBadge.label} — App menu` : 'App menu'}
         aria-expanded={open}
       >
         <IconDots class="session-menu-icon" />
@@ -268,7 +278,7 @@ function SessionMenu({ session, terminalFontSize, onTerminalFontSizeChange, onRe
           {hasActions && (
             <>
               <button
-                class={`session-menu-action${staleKind ? ' stale' : ''}`}
+                class="session-menu-action"
                 onClick={() => { setOpen(false); onRestart!() }}
               >
                 <IconRestart class="session-menu-action-icon" />
@@ -299,6 +309,9 @@ function SessionMenu({ session, terminalFontSize, onTerminalFontSizeChange, onRe
               <div class="session-menu-divider" />
             </>
           )}
+          <div class="session-menu-section-title">Appearance</div>
+          <ThemeMenuOptions onSelect={() => setOpen(false)} />
+          <div class="session-menu-divider" />
           <div class="session-menu-section-title">Host</div>
           <button
             type="button"
@@ -319,49 +332,53 @@ function SessionMenu({ session, terminalFontSize, onTerminalFontSizeChange, onRe
               <DisplaySleepStatusIcon capability={displaySleep} requestState={displaySleepRequestState} />
             </span>
           </button>
-          <div class="session-menu-divider" />
-          <div class="session-menu-section-title">Terminal</div>
-          <div class="session-menu-font-row">
-            <span class="session-menu-label">Font size</span>
-            <div class="session-menu-font-controls" aria-label="Terminal font size">
-              <button
-                type="button"
-                class="session-menu-font-btn"
-                onClick={() => onTerminalFontSizeChange(-TERMINAL_FONT_SIZE_STEP)}
-                disabled={terminalFontSize <= TERMINAL_FONT_SIZE_MIN}
-                aria-label="Decrease terminal font size"
-              >
-                −
-              </button>
-              <span class="session-menu-font-value">{terminalFontSize}px</span>
-              <button
-                type="button"
-                class="session-menu-font-btn"
-                onClick={() => onTerminalFontSizeChange(TERMINAL_FONT_SIZE_STEP)}
-                disabled={terminalFontSize >= TERMINAL_FONT_SIZE_MAX}
-                aria-label="Increase terminal font size"
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <div class="session-menu-divider" />
-          <div class="session-menu-section-title">Session info</div>
-          <div class="session-menu-row">
-            <span class="session-menu-label">Adapter</span>
-            <span class="session-menu-value">{session.kind}</span>
-          </div>
-          <div class="session-menu-row">
-            <span class="session-menu-label">Version</span>
-            <span class={`session-menu-value${staleKind ? ' stale' : ''}`}>
-              {versionDisplay}
-            </span>
-          </div>
-          {session.peer && (
-            <div class="session-menu-row">
-              <span class="session-menu-label">Host</span>
-              <span class="session-menu-value">{session.peer}</span>
-            </div>
+          {session && (
+            <>
+              <div class="session-menu-divider" />
+              <div class="session-menu-section-title">Terminal</div>
+              <div class="session-menu-font-row">
+                <span class="session-menu-label">Font size</span>
+                <div class="session-menu-font-controls" aria-label="Terminal font size">
+                  <button
+                    type="button"
+                    class="session-menu-font-btn"
+                    onClick={() => onTerminalFontSizeChange(-TERMINAL_FONT_SIZE_STEP)}
+                    disabled={terminalFontSize <= TERMINAL_FONT_SIZE_MIN}
+                    aria-label="Decrease terminal font size"
+                  >
+                    −
+                  </button>
+                  <span class="session-menu-font-value">{terminalFontSize}px</span>
+                  <button
+                    type="button"
+                    class="session-menu-font-btn"
+                    onClick={() => onTerminalFontSizeChange(TERMINAL_FONT_SIZE_STEP)}
+                    disabled={terminalFontSize >= TERMINAL_FONT_SIZE_MAX}
+                    aria-label="Increase terminal font size"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              <div class="session-menu-divider" />
+              <div class="session-menu-section-title">Session info</div>
+              <div class="session-menu-row">
+                <span class="session-menu-label">Adapter</span>
+                <span class="session-menu-value">{session.kind}</span>
+              </div>
+              <div class="session-menu-row">
+                <span class="session-menu-label">Version</span>
+                <span class={`session-menu-value${staleKind ? ' stale' : ''}`}>
+                  {versionDisplay}
+                </span>
+              </div>
+              {session.peer && (
+                <div class="session-menu-row">
+                  <span class="session-menu-label">Host</span>
+                  <span class="session-menu-value">{session.peer}</span>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

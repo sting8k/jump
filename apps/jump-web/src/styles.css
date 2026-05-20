@@ -11,7 +11,8 @@ code {
   border-radius: var(--radius-sm);
 }
 
-:root {
+:root,
+:root[data-theme="default"] {
   /* Terminal pasture: dark mono surfaces, thin borders, living state dots. */
   --bg: #11111b;
   --bg-sidebar: #181825;
@@ -26,6 +27,8 @@ code {
   --text-secondary: #a6adc8;
   --text-muted: #6c7086;
   --text-faint: #45475a;
+  --text-heading: #a6adc8;
+  --text-bracket: #585b70;
 
   /* Borders */
   --border: #313244;
@@ -58,6 +61,41 @@ code {
   /* Sizing */
   --sidebar-width: 252px;
   --header-height: 36px;
+}
+
+:root[data-theme="spacetime"] {
+  /* SpacetimeDB-inspired: blue-black surfaces, cold borders, softer neon accents. */
+  --bg: #0d1218;
+  --bg-sidebar: #0f171f;
+  --bg-surface: #121b24;
+  --bg-hover: #182531;
+  --bg-selected: #18323f;
+  --terminal-bg: #11111b;
+  --bg-void: #090d11;
+
+  --text: #dce7ef;
+  --text-secondary: #b8c8d5;
+  --text-muted: #718391;
+  --text-faint: #34414b;
+  --text-heading: #93ddcd;
+  --text-bracket: #45606b;
+
+  --border: #1b2a34;
+  --border-strong: #27404d;
+
+  --accent: #6df0aa;
+  --accent-warn: #ead18a;
+  --accent-blue: #55c7ee;
+
+  --unread: #55c7ee;
+  --active: #ead18a;
+
+  --status-error: #ff7aa8;
+  --status-connected: #6df0aa;
+  --status-disconnected: #ead18a;
+
+  --edge-hi: oklch(100% 0 0 / 0.045);
+  --edge-shadow: color-mix(in oklch, black 50%, var(--bg));
 }
 
 *,
@@ -1343,7 +1381,7 @@ body {
   width: 6px;
   height: 6px;
   border-radius: var(--radius);
-  background: oklch(80% 0.15 65);
+  background: var(--accent-warn);
   border: 1.5px solid var(--bg);
   pointer-events: none;
 }
@@ -1352,7 +1390,7 @@ body {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  min-width: 220px;
+  min-width: 244px;
   background: var(--bg-surface);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius);
@@ -1405,12 +1443,12 @@ body {
 }
 
 .session-menu-action.stale {
-  color: oklch(80% 0.15 65);
+  color: var(--accent-warn);
 }
 
 .session-menu-action.stale:hover {
-  background: oklch(80% 0.15 65 / 0.08);
-  color: oklch(88% 0.15 65);
+  background: color-mix(in oklch, var(--accent-warn) 10%, transparent);
+  color: var(--accent-warn);
 }
 
 /* Small tag shown next to the action label when runner is stale */
@@ -1420,8 +1458,8 @@ body {
   letter-spacing: 0.04em;
   padding: 1px 5px;
   border-radius: var(--radius);
-  background: oklch(80% 0.15 65 / 0.15);
-  color: oklch(80% 0.15 65);
+  background: color-mix(in oklch, var(--accent-warn) 16%, transparent);
+  color: var(--accent-warn);
   white-space: nowrap;
 }
 
@@ -1472,9 +1510,72 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: var(--text-heading);
   padding: 6px 12px 2px;
 }
+
+.theme-menu-options {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px 8px;
+}
+
+.theme-menu-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid color-mix(in oklch, var(--border) 86%, transparent);
+  border-radius: var(--radius);
+  background: color-mix(in oklch, var(--bg) 48%, transparent);
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.12s;
+}
+
+.theme-menu-option:hover,
+.theme-menu-option:focus-visible {
+  background: color-mix(in oklch, var(--bg-hover) 84%, var(--accent) 8%);
+  border-color: color-mix(in oklch, var(--accent) 42%, var(--border));
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.theme-menu-option.active {
+  background: color-mix(in oklch, var(--accent) 10%, var(--bg-hover));
+  border-color: color-mix(in oklch, var(--accent) 68%, var(--border));
+}
+
+.theme-menu-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: inset 0 1px 0 var(--edge-hi);
+}
+
+.theme-menu-swatch.default {
+  background: linear-gradient(135deg, #11111b 0 50%, #a6e3a1 50% 72%, #89b4fa 72%);
+}
+
+.theme-menu-swatch.spacetime {
+  background: linear-gradient(135deg, #0d1218 0 48%, #6df0aa 48% 70%, #8a80ff 70%);
+}
+
+.theme-menu-active-dot {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: var(--radius-dot);
+  background: var(--accent);
+  box-shadow: 0 0 7px color-mix(in oklch, var(--accent) 60%, transparent);
+}
+
 
 /* Key/value info rows */
 .session-menu-row {
@@ -1548,7 +1649,7 @@ body {
 }
 
 .session-menu-value.stale {
-  color: oklch(80% 0.15 65);
+  color: var(--accent-warn);
 }
 
 .terminal-shell {
@@ -1770,7 +1871,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.12em;
-  color: var(--text-muted);
+  color: var(--text-heading);
   margin-bottom: 12px;
 }
 
@@ -3048,7 +3149,7 @@ code {
 .launch-target-line,
 .session-menu-section-title,
 .mp-section-label {
-  color: var(--accent-warn);
+  color: var(--text-heading);
   letter-spacing: 0.12em;
 }
 
@@ -3315,7 +3416,7 @@ code {
 }
 
 .home-section-title {
-  color: var(--text-muted);
+  color: var(--text-heading);
   font-size: 10.5px;
   margin: 20px 0 8px;
   letter-spacing: 0.16em;
@@ -3323,12 +3424,12 @@ code {
 
 .home-section-title::before {
   content: '┌─ ';
-  color: var(--border-strong);
+  color: var(--text-bracket);
 }
 
 .home-section-title::after {
   content: ' ─────────────────';
-  color: var(--border-strong);
+  color: var(--text-bracket);
 }
 
 .home-host-grid,
@@ -3702,7 +3803,7 @@ code {
 
 .main-header-left .main-header-title::before {
   content: 'BUFFER:';
-  color: var(--text-muted);
+  color: var(--text-heading);
   font-family: var(--font-tech);
   font-size: 9.5px;
   font-weight: 600;
@@ -3740,16 +3841,16 @@ code {
 /* Home: keep the terminal grid idea, but give cards breathing room. */
 .home::before {
   content: 'JUMP // CONTROL PLANE';
-  color: var(--text-faint);
+  color: var(--text-heading);
   font-family: var(--font-tech);
 }
 
 .home-section-title::before {
-  color: var(--text-faint);
+  color: var(--text-bracket);
 }
 
 .home-section-title::after {
-  color: color-mix(in oklch, var(--border) 72%, transparent);
+  color: color-mix(in oklch, var(--text-bracket) 72%, transparent);
 }
 
 .home-host-grid,
@@ -3904,7 +4005,7 @@ select:focus-visible,
 .mp-section-label::before,
 .modal-label::before {
   content: '[';
-  color: var(--text-faint);
+  color: var(--text-bracket);
 }
 
 .launch-target-line::after,
@@ -3912,7 +4013,7 @@ select:focus-visible,
 .mp-section-label::after,
 .modal-label::after {
   content: ']';
-  color: var(--text-faint);
+  color: var(--text-bracket);
 }
 
 .session-item,
@@ -4139,6 +4240,60 @@ select:focus-visible,
   border: 1px solid color-mix(in oklch, var(--border) 82%, transparent);
   border-radius: var(--radius);
   background: color-mix(in oklch, var(--bg-surface) 72%, var(--bg));
+}
+
+:root[data-theme="spacetime"] .app-layout {
+  background:
+    radial-gradient(ellipse at 82% -12%, color-mix(in oklch, var(--accent-blue) 16%, transparent), transparent 42%),
+    radial-gradient(ellipse at 12% 112%, color-mix(in oklch, var(--accent) 12%, transparent), transparent 34%),
+    repeating-linear-gradient(90deg, transparent 0 31px, color-mix(in oklch, var(--accent-blue) 5%, transparent) 31px 32px),
+    repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in oklch, var(--accent) 3%, transparent) 31px 32px),
+    var(--bg);
+}
+
+:root[data-theme="spacetime"] .main-panel {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 4%, transparent), transparent 180px),
+    var(--bg);
+}
+
+:root[data-theme="spacetime"] .sidebar,
+:root[data-theme="spacetime"] .main-header,
+:root[data-theme="spacetime"] .sidebar-header,
+:root[data-theme="spacetime"] .sidebar-footer {
+  background: color-mix(in oklch, var(--bg-sidebar) 88%, black);
+}
+
+:root[data-theme="spacetime"] .home {
+  background:
+    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 5%, transparent), transparent 180px),
+    linear-gradient(0deg, color-mix(in oklch, var(--accent) 3%, transparent), transparent 260px);
+}
+
+:root[data-theme="spacetime"] .home-host-card,
+:root[data-theme="spacetime"] .home-project-card,
+:root[data-theme="spacetime"] .home-workspace-add,
+:root[data-theme="spacetime"] .mp-section,
+:root[data-theme="spacetime"] .modal-panel,
+:root[data-theme="spacetime"] .session-menu-dropdown {
+  background:
+    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 7%, transparent), transparent 54px),
+    color-mix(in oklch, var(--bg-surface) 94%, black);
+  border-color: color-mix(in oklch, var(--accent-blue) 22%, var(--border));
+  box-shadow:
+    inset 0 1px 0 var(--edge-hi),
+    0 12px 28px color-mix(in oklch, black 35%, transparent);
+}
+
+:root[data-theme="spacetime"] .session-item.selected {
+  background:
+    linear-gradient(90deg, color-mix(in oklch, var(--accent) 16%, transparent), transparent 72%),
+    color-mix(in oklch, var(--bg-selected) 82%, var(--bg));
+  border-color: color-mix(in oklch, var(--accent) 36%, var(--border-strong));
+}
+
+:root[data-theme="spacetime"] .theme-menu-option {
+  border-radius: 999px;
 }
 
 .mp-section + .mp-section {

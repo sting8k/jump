@@ -34,10 +34,12 @@ export {
 // ── Fetching ──
 
 import type { SettingsConfig, ThemeColors } from './settings-schema'
+import { normalizeAppearance, serializeAppearance, type AppearancePreferences } from './appearance'
 
 export interface FrontendConfig {
   settings: SettingsConfig | null
   themeColors: ThemeColors | null
+  appearance: AppearancePreferences | null
 }
 
 /**
@@ -47,14 +49,27 @@ export interface FrontendConfig {
 export async function fetchFrontendConfig(): Promise<FrontendConfig> {
   try {
     const resp = await fetch('/v1/frontend-config')
-    if (!resp.ok) return { settings: null, themeColors: null }
+    if (!resp.ok) return { settings: null, themeColors: null, appearance: null }
     const json = await resp.json()
     const data = json.data ?? {}
     return {
       settings: data.settings ?? null,
       themeColors: data.theme ?? null,
+      appearance: data.appearance == null ? null : normalizeAppearance(data.appearance),
     }
   } catch {
-    return { settings: null, themeColors: null }
+    return { settings: null, themeColors: null, appearance: null }
+  }
+}
+
+export async function saveFrontendPreferences(appearance: AppearancePreferences, signal?: AbortSignal): Promise<void> {
+  const resp = await fetch('/v1/frontend-preferences', {
+    method: 'PATCH',
+    signal,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ appearance: serializeAppearance(appearance) }),
+  })
+  if (!resp.ok) {
+    throw new Error(`failed to save frontend preferences: ${resp.status}`)
   }
 }

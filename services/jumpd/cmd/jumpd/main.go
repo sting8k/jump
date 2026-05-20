@@ -47,6 +47,7 @@ import (
 	"github.com/sting8k/jump/services/jumpd/internal/tsdiscovery"
 	"github.com/sting8k/jump/services/jumpd/internal/unixipc"
 	"github.com/sting8k/jump/services/jumpd/internal/update"
+	"github.com/sting8k/jump/services/jumpd/internal/webprefs"
 	"github.com/sting8k/jump/services/jumpd/internal/wsproxy"
 	"nhooyr.io/websocket"
 )
@@ -575,6 +576,10 @@ func serve(stderr io.Writer) int {
 	}
 	projectMgr.SeedIfEmpty()
 
+	// Web preferences are jumpd-managed UI state, separate from user-editable
+	// settings.jsonc/theme.jsonc terminal configuration.
+	webPrefsMgr := webprefs.NewManager(stateDir)
+
 	// Keep project membership arrays in sync with scanner-driven removals
 	// such as stale ephemeral cleanup, 24-hour dead-session TTL pruning, and invalid timestamp cleanup.
 	scanner.OnRemove = func(sess store.Session) {
@@ -763,25 +768,7 @@ func serve(stderr io.Writer) int {
 		})
 	})
 
-	// Frontend config (read from disk on each request so users can edit
-	// and refresh without restarting jumpd).
-	mux.HandleFunc("GET /v1/frontend-config", func(w http.ResponseWriter, r *http.Request) {
-		theme, themeErr := config.LoadTheme()
-		settings, settingsErr := config.LoadSettings()
-		if themeErr != nil {
-			log.Printf("frontend-config: theme: %v", themeErr)
-		}
-		if settingsErr != nil {
-			log.Printf("frontend-config: settings: %v", settingsErr)
-		}
-		writeJSON(w, map[string]any{
-			"ok": true,
-			"data": map[string]any{
-				"theme":    theme,
-				"settings": settings,
-			},
-		})
-	})
+	registerFrontendConfigRoutes(mux, webPrefsMgr)
 
 	// ── Projects ──
 
