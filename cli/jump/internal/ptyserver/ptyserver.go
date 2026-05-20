@@ -37,6 +37,16 @@ import (
 // of styled terminal cells after long agent output.
 const maxScrollback = 500
 
+// ptyReadBufferSize is the raw read chunk size from the PTY. The deferred
+// screen queue may accumulate several of these chunks between drains.
+const ptyReadBufferSize = 32 * 1024
+
+// maxRetainedScreenPendingCap is the largest backing array kept for the
+// transient screenPending queue after it is drained. It preserves reuse for
+// normal bursts while releasing one-off long-output high-water buffers in
+// long-lived sessions.
+const maxRetainedScreenPendingCap = 8 * ptyReadBufferSize
+
 const wsWriteTimeout = 3 * time.Second
 
 // outboundQueueLimit bounds per-client live terminal frames. A client that
@@ -410,7 +420,11 @@ func (s *Server) drainScreenLocked() {
 	bytes := len(s.screenPending)
 	start := time.Now()
 	s.screen.Write(s.screenPending)
-	s.screenPending = s.screenPending[:0]
+	if cap(s.screenPending) > maxRetainedScreenPendingCap {
+		s.screenPending = nil
+	} else {
+		s.screenPending = s.screenPending[:0]
+	}
 	s.perf.observeScreenDrain(bytes, time.Since(start))
 }
 
@@ -1070,7 +1084,7 @@ func coalesceDelay(bytes int) time.Duration {
 func (s *Server) readPTY() {
 	defer close(s.ptyDone)
 
-	buf := make([]byte, 32*1024)
+	buf := make([]byte, ptyReadBufferSize)
 	var accum []byte
 	timer := time.NewTimer(coalesceBurstInterval)
 	timer.Stop()

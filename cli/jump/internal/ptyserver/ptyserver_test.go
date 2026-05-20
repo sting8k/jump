@@ -1127,6 +1127,46 @@ func TestTerminalModeReplayTracksMouseModes(t *testing.T) {
 	}
 }
 
+// TestDrainScreenBoundsRetainedPendingBuffer verifies that the deferred screen
+// queue does not keep one-off high-water backing arrays for a long-lived runner.
+func TestDrainScreenBoundsRetainedPendingBuffer(t *testing.T) {
+	t.Run("reuses small buffer", func(t *testing.T) {
+		screen := newScreen(80, 24, func(bool) {}, nil)
+		defer screen.Close()
+
+		srv := &Server{screen: screen, perf: &perfStats{}}
+		srv.screenPending = make([]byte, 1, ptyReadBufferSize)
+		srv.screenPending[0] = 'x'
+
+		srv.drainScreenLocked()
+
+		if len(srv.screenPending) != 0 {
+			t.Fatalf("screenPending len = %d, want 0", len(srv.screenPending))
+		}
+		if cap(srv.screenPending) != ptyReadBufferSize {
+			t.Fatalf("screenPending cap = %d, want %d", cap(srv.screenPending), ptyReadBufferSize)
+		}
+	})
+
+	t.Run("releases high-water buffer", func(t *testing.T) {
+		screen := newScreen(80, 24, func(bool) {}, nil)
+		defer screen.Close()
+
+		srv := &Server{screen: screen, perf: &perfStats{}}
+		srv.screenPending = make([]byte, 1, maxRetainedScreenPendingCap+1)
+		srv.screenPending[0] = 'x'
+
+		srv.drainScreenLocked()
+
+		if len(srv.screenPending) != 0 {
+			t.Fatalf("screenPending len = %d, want 0", len(srv.screenPending))
+		}
+		if cap(srv.screenPending) != 0 {
+			t.Fatalf("screenPending cap = %d, want released", cap(srv.screenPending))
+		}
+	})
+}
+
 // TestRenderScreenIncludesScrollback verifies that renderScreen includes
 // lines that scrolled off the top of the screen, not just the visible rows.
 func TestRenderScreenIncludesScrollback(t *testing.T) {
