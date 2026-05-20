@@ -172,12 +172,12 @@ describe('appearance preferences', () => {
   afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
   it('applies theme locally and saves it to the server', async () => {
-    await setThemeId('spacetime')
+    await setThemeId('vercel')
 
-    expect(appearance.value).toEqual({ themeId: 'spacetime' })
+    expect(appearance.value).toEqual({ themeId: 'vercel' })
     expect(fetch).toHaveBeenCalledWith('/v1/frontend-preferences', expect.objectContaining({
       method: 'PATCH',
-      body: JSON.stringify({ appearance: { theme_id: 'spacetime' } }),
+      body: JSON.stringify({ appearance: { theme_id: 'vercel' } }),
     }))
   })
 

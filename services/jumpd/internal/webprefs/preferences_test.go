@@ -44,13 +44,17 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 }
 
-func TestNormalizeAppearanceAcceptsSpacetimeTheme(t *testing.T) {
-	appearance, err := NormalizeAppearance(Appearance{ThemeID: SpacetimeThemeID})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if appearance.ThemeID != SpacetimeThemeID {
-		t.Fatalf("theme_id = %q, want %q", appearance.ThemeID, SpacetimeThemeID)
+func TestNormalizeAppearanceAcceptsKnownThemes(t *testing.T) {
+	for _, themeID := range []string{SpacetimeThemeID, VercelThemeID} {
+		t.Run(themeID, func(t *testing.T) {
+			appearance, err := NormalizeAppearance(Appearance{ThemeID: themeID})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if appearance.ThemeID != themeID {
+				t.Fatalf("theme_id = %q, want %q", appearance.ThemeID, themeID)
+			}
+		})
 	}
 }
 

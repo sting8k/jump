@@ -10,7 +10,7 @@ normal
 
 ## Product Contract
 
-The Web UI has client-side theme switching for chrome/UI surfaces. It ships the existing `default` theme plus a `spacetime` theme inspired by SpacetimeDB's dark blue-black surfaces, thin cold borders, grid/radial background fields, glassier panels, and neon green/blue/purple accents. The selected `theme_id` is applied immediately in the browser, cached locally for first paint, and persisted by `jumpd` as server-managed Web UI state without page reloads or terminal/session reconnects.
+The Web UI has client-side theme switching for chrome/UI surfaces. It ships the existing `default` theme, a `spacetime` theme inspired by SpacetimeDB's dark blue-black surfaces, and a `vercel` theme with a Graphite Studio direction inspired by Vercel/v0 Compute's cool monochrome surfaces plus Apple-style material restraint: softer geometry, calmer spacing, crisp borders, subtle silver page-level atmosphere, and shape/contrast state treatment instead of decorative color accents. The selected `theme_id` is applied immediately in the browser, cached locally for first paint, and persisted by `jumpd` as server-managed Web UI state without page reloads or terminal/session reconnects.
 
 ## Relevant Product Docs
 
@@ -18,7 +18,7 @@ The Web UI has client-side theme switching for chrome/UI surfaces. It ships the 
 
 ## Acceptance Criteria
 
-- The shipped themes are `default` and `spacetime`; `default` keeps the existing Web UI visuals.
+- The shipped themes are `default`, `spacetime`, and `vercel`; `default` keeps the existing Web UI visuals.
 - The browser applies cached appearance before app mount to avoid a first-paint theme flash.
 - The top-right `...` app menu renders theme options as a compact one-row swatch button group with tooltips when multiple themes exist and switches the Web UI instantly.
 - `GET /v1/frontend-config` returns the server-managed appearance preference alongside existing frontend config.
@@ -30,7 +30,7 @@ The Web UI has client-side theme switching for chrome/UI surfaces. It ships the 
 
 - Commands: no CLI behavior change.
 - Queries: extend `/v1/frontend-config` with `appearance`.
-- API: add `PATCH /v1/frontend-preferences` with `{ "appearance": { "theme_id": "spacetime" } }`.
+- API: add `PATCH /v1/frontend-preferences` with `{ "appearance": { "theme_id": "vercel" } }`.
 - Tables: no database; server state is `~/.local/state/jump/web-preferences.json`.
 - Domain rules: theme ids are whitelisted by client and server; future themes extend the catalog, server whitelist, and CSS token blocks.
 - UI surfaces: the top-right `...` app menu hosts compact theme swatches for the Web UI chrome only.
@@ -52,7 +52,7 @@ None.
 ## Evidence
 
 - `TMPDIR=/tmp GOWORK=$PWD/go.work go test ./services/jumpd/internal/webprefs ./services/jumpd/cmd/jumpd` passed.
-- `pnpm --filter @jump/web test -- appearance.test.ts store.test.ts --runInBand` passed (Vitest ran the full `@jump/web` suite: 22 files, 362 tests).
+- `pnpm --filter @jump/web test -- appearance.test.ts store.test.ts --runInBand` passed (Vitest ran the full `@jump/web` suite: 22 files, 363 tests).
 - `pnpm --filter @jump/web lint` passed.
 - `pnpm --filter @jump/web build` passed.
 - `git diff --check` passed.

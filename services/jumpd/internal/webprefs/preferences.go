@@ -14,6 +14,7 @@ const (
 	currentVersion   = 1
 	DefaultThemeID   = "default"
 	SpacetimeThemeID = "spacetime"
+	VercelThemeID    = "vercel"
 )
 
 var (
@@ -23,6 +24,7 @@ var (
 	knownThemeIDs     = map[string]struct{}{
 		DefaultThemeID:   {},
 		SpacetimeThemeID: {},
+		VercelThemeID:    {},
 	}
 )
 

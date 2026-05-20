@@ -16,9 +16,11 @@ interface StorageLike {
 export const APPEARANCE_STORAGE_KEY = 'jump:appearance'
 export const DEFAULT_THEME_ID = 'default'
 export const SPACETIME_THEME_ID = 'spacetime'
+export const VERCEL_THEME_ID = 'vercel'
 export const THEME_CATALOG: readonly ThemeDefinition[] = [
   { id: DEFAULT_THEME_ID, label: 'Default', themeColor: '#0a0e13' },
   { id: SPACETIME_THEME_ID, label: 'Spacetime', themeColor: '#202126' },
+  { id: VERCEL_THEME_ID, label: 'Vercel', themeColor: '#000000' },
 ]
 export const DEFAULT_APPEARANCE: AppearancePreferences = { themeId: DEFAULT_THEME_ID }
 

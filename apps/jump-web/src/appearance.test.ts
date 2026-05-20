@@ -3,6 +3,7 @@ import {
   APPEARANCE_STORAGE_KEY,
   DEFAULT_APPEARANCE,
   DEFAULT_THEME_ID,
+  VERCEL_THEME_ID,
   normalizeAppearance,
   normalizeThemeId,
   readCachedAppearance,
@@ -31,7 +32,7 @@ describe('appearance preferences', () => {
 
   it('normalizes snake_case and camelCase inputs', () => {
     expect(normalizeAppearance({ theme_id: 'spacetime' })).toEqual({ themeId: 'spacetime' })
-    expect(normalizeAppearance({ themeId: 'spacetime' })).toEqual({ themeId: 'spacetime' })
+    expect(normalizeAppearance({ themeId: VERCEL_THEME_ID })).toEqual({ themeId: VERCEL_THEME_ID })
   })
 
   it('falls back for unknown or unsafe theme ids', () => {
