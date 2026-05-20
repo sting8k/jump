@@ -38,6 +38,24 @@ const maxScrollback = 500
 
 const wsWriteTimeout = 3 * time.Second
 
+// outboundQueueLimit bounds per-client live terminal frames. A client that
+// cannot keep up is cancelled so it cannot stall PTY output delivery to local
+// terminal output or other browser clients.
+const outboundQueueLimit = 64
+
+type enqueueResult int
+
+const (
+	enqueueOK enqueueResult = iota
+	enqueueClosed
+	enqueueFull
+)
+
+type wsFrame struct {
+	typ  websocket.MessageType
+	data []byte
+}
+
 // ErrSocketInUse is returned by BindSocket when the requested socket
 // path is already owned by a live listener (a probe at that path got
 // a response). Callers that received this error from New should pick
@@ -163,6 +181,7 @@ type Server struct {
 	screen   *vt.Emulator // virtual terminal for replay snapshots (guarded by mu)
 	adapter  adapter.Adapter
 	state    *session.State
+	perf     *perfStats
 
 	mu             sync.Mutex
 	clients        map[*wsClient]struct{}
@@ -184,15 +203,48 @@ type wsClient struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	readonly bool
-	writeMu  sync.Mutex
+	out      chan wsFrame
 }
 
-func (c *wsClient) write(typ websocket.MessageType, data []byte) error {
-	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
+func (c *wsClient) writeDirect(typ websocket.MessageType, data []byte, stats *perfStats) error {
 	ctx, cancel := context.WithTimeout(c.ctx, wsWriteTimeout)
 	defer cancel()
-	return c.conn.Write(ctx, typ, data)
+	start := time.Now()
+	err := c.conn.Write(ctx, typ, data)
+	stats.observeWSWrite(len(data), time.Since(start), err)
+	return err
+}
+
+func (c *wsClient) enqueue(frame wsFrame) enqueueResult {
+	select {
+	case <-c.ctx.Done():
+		return enqueueClosed
+	default:
+	}
+
+	select {
+	case c.out <- frame:
+		return enqueueOK
+	case <-c.ctx.Done():
+		return enqueueClosed
+	default:
+		c.cancel()
+		return enqueueFull
+	}
+}
+
+func (c *wsClient) runWriter(stats *perfStats) {
+	for {
+		select {
+		case <-c.ctx.Done():
+			return
+		case frame := <-c.out:
+			if err := c.writeDirect(frame.typ, frame.data, stats); err != nil {
+				c.cancel()
+				return
+			}
+		}
+	}
 }
 
 // Config for creating a new PTY server.
@@ -270,6 +322,7 @@ func New(cfg Config) (*Server, error) {
 		screen:     nil, // set below after s is constructed
 		adapter:    cfg.Adapter,
 		state:      cfg.State,
+		perf:       &perfStats{},
 		clients:    make(map[*wsClient]struct{}),
 		localOut:   cfg.LocalOut,   // wired before readPTY starts so early output is never lost
 		scrollback: cfg.Scrollback, // same: wired pre-readPTY so fast-exit output is never lost
@@ -299,8 +352,11 @@ func (s *Server) drainScreenLocked() {
 	if len(s.screenPending) == 0 {
 		return
 	}
+	bytes := len(s.screenPending)
+	start := time.Now()
 	s.screen.Write(s.screenPending)
 	s.screenPending = s.screenPending[:0]
+	s.perf.observeScreenDrain(bytes, time.Since(start))
 }
 
 // screenSyncInterval controls how often the background goroutine feeds
@@ -428,6 +484,7 @@ func (s *Server) serve() {
 	mux.HandleFunc("PUT /status", s.handlePutStatus)
 	mux.HandleFunc("PUT /slug", s.handlePutSlug)
 	mux.HandleFunc("GET /events", s.handleEvents)
+	mux.HandleFunc("GET /debug/perf", s.handleDebugPerf)
 	mux.HandleFunc("POST /kill", s.handleKill)
 
 	// WebSocket terminal attach (fallback for / with Upgrade header)
@@ -664,6 +721,11 @@ func (s *Server) handleKill(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (s *Server) handleDebugPerf(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(s.perf.snapshot())
+}
+
 func (s *Server) handleEvents(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -713,14 +775,20 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		conn:   conn,
 		ctx:    ctx,
 		cancel: cancel,
+		out:    make(chan wsFrame, outboundQueueLimit),
 	}
 
 	// Replay screen state, then register for live data.
-	// All steps happen under s.mu so readPTY cannot send live data to
-	// this client before the snapshot frame.
+	// Snapshot construction and registration happen under s.mu so readPTY
+	// cannot enqueue live data for this client before the snapshot frame
+	// exists. The network write itself happens after unlocking; live data
+	// queued during that write waits in client.out until runWriter starts,
+	// preserving snapshot-before-live ordering without letting a slow
+	// snapshot write block the PTY hot path.
 	//
 	// Ordering guarantee: snapshot is always the first message the client
-	// receives, followed by any live data from subsequent readPTY cycles.
+	// receives, followed by any live data queued during or after the snapshot
+	// write.
 	//
 	// The screen state comes from a virtual terminal (charmbracelet/x/vt)
 	// that processes every byte of PTY output. renderScreen serializes
@@ -730,6 +798,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// Sequence: BSU → reset → scrollback + screen → cursor → ESU
 	s.mu.Lock()
 	s.drainScreenLocked()
+	renderStart := time.Now()
 	snapshot := renderScreen(s.screen)
 	cursorSeq := "\x1b[?25h" // show cursor (default)
 	if s.cursorHidden {
@@ -742,20 +811,10 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	resetSeq := "\x1b[r\x1b[H\x1b[2J\x1b[3J" // Reset scroll region + cursor home + erase display + erase scrollback
 	esu := "\x1b[?2026l"                     // End Synchronized Update
 	frame := []byte(bsu + resetSeq + snapshot + cursorPos + cursorSeq + esu)
-	if err := client.write(websocket.MessageBinary, frame); err != nil {
-		s.mu.Unlock()
-		conn.Close(websocket.StatusNormalClosure, "")
-		cancel()
-		return
-	}
+	s.perf.observeSnapshotRender(len(frame), time.Since(renderStart))
 	s.clients[client] = struct{}{}
 	s.lastClientLeft = time.Time{} // reset: we have an active viewer
 	s.mu.Unlock()
-
-	// Client connected — they'll see the scrollback, so clear unread
-	if s.state != nil {
-		s.state.SetUnread(false)
-	}
 
 	defer func() {
 		s.mu.Lock()
@@ -778,6 +837,16 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		conn.Close(websocket.StatusNormalClosure, "")
 		cancel()
 	}()
+
+	if err := client.writeDirect(websocket.MessageBinary, frame, s.perf); err != nil {
+		return
+	}
+	go client.runWriter(s.perf)
+
+	// Client connected — they'll see the scrollback, so clear unread
+	if s.state != nil {
+		s.state.SetUnread(false)
+	}
 
 	// Read from WebSocket, write to PTY
 	for {
@@ -905,9 +974,14 @@ func (s *Server) resize(msg ResizeMsg) {
 	}
 	s.mu.Unlock()
 
+	s.enqueueToClients(clients, websocket.MessageText, payload)
+}
+
+func (s *Server) enqueueToClients(clients []*wsClient, typ websocket.MessageType, data []byte) {
+	frame := wsFrame{typ: typ, data: data}
 	for _, c := range clients {
-		if err := c.write(websocket.MessageText, payload); err != nil {
-			c.cancel()
+		if c.enqueue(frame) == enqueueFull {
+			s.perf.observeSlowClientDrop()
 		}
 	}
 }
@@ -951,6 +1025,8 @@ func (s *Server) readPTY() {
 		}
 		data := accum
 		accum = nil
+
+		s.perf.observePTYFlush(len(data))
 
 		// Process adapter/title hooks on the accumulated chunk.
 		if title := adapters.ParseOSCTitle(data); title != "" {
@@ -996,14 +1072,12 @@ func (s *Server) readPTY() {
 		if s.scrollback != nil {
 			// Best-effort: scrollback Write contract is no-error,
 			// IO failures are sticky and surfaced via Close.
+			start := time.Now()
 			s.scrollback.Write(data)
+			s.perf.observeScrollbackWrite(len(data), time.Since(start))
 		}
 
-		for _, c := range clients {
-			if err := c.write(websocket.MessageBinary, data); err != nil {
-				c.cancel()
-			}
-		}
+		s.enqueueToClients(clients, websocket.MessageBinary, data)
 	}
 
 	readCh := make(chan []byte, 4)

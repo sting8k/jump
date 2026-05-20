@@ -9,7 +9,7 @@ import { attachKeyboardHandler, attachPasteHandler, ctrlSequenceFor, defaultPast
 import { DEFAULT_THEME_COLORS, type ResolvedKeybind } from './config'
 import { attachMobileInputHandler } from './mobile-input'
 import { createReplayBuffer } from './replay'
-import { createTerminalIO, type TerminalSize } from './terminal-io'
+import { createTerminalIO, type TerminalIOPerfEvent, type TerminalSize } from './terminal-io'
 import { addPageResumeListener } from './page-resume'
 import { decideViewportResize, sameSize } from './terminal-resize'
 import { MOCK_BY_ID } from './mock-data/index'
@@ -36,6 +36,20 @@ function loadPreferredRenderer(term: Terminal) {
 export const TERM_THEME = DEFAULT_THEME_COLORS
 
 // ── Utilities ──
+function terminalPerfLoggingEnabled(): boolean {
+  try {
+    return (window as any).__JUMP_TERMINAL_PERF__ === true
+      || window.localStorage?.getItem('jump:terminal-perf') === '1'
+  } catch {
+    return false
+  }
+}
+
+function logTerminalPerf(sessionId: string, event: TerminalIOPerfEvent) {
+  if (!terminalPerfLoggingEnabled()) return
+  console.debug('[jump] terminal perf', { sessionId, ...event })
+}
+
 
 /**
  * Calculate terminal cols/rows that fit within a given element.
@@ -472,25 +486,29 @@ export function TerminalView({
     const initialVp = shellRef.current ? measureTerminalFit(term, shellRef.current) : getProposedTerminalSize(fitAddon)
     setViewportSize(initialVp); viewportSizeRef.current = initialVp
     termRef.current = term
-    termIoRef.current = createTerminalIO(term, {
-      getState() {
-        const buf = term.buffer.active
-        return { viewportY: buf.viewportY, baseY: buf.baseY, rows: term.rows }
+    termIoRef.current = createTerminalIO(
+      term,
+      {
+        getState() {
+          const buf = term.buffer.active
+          return { viewportY: buf.viewportY, baseY: buf.baseY, rows: term.rows }
+        },
+        scrollToLine(line: number) { term.scrollToLine(line) },
+        scrollToBottom() { term.scrollToBottom() },
+        getLine(y: number): string | null {
+          const line = term.buffer.active.getLine(y)
+          if (!line) return null
+          const text = line.translateToString(true)
+          // Filter trivial anchors so a wipe-and-redraw doesn't snap the
+          // user to the first stretch of separators or whitespace it
+          // finds. Four visible chars is enough to be distinctive without
+          // excluding short but meaningful lines ("DONE", "PASS", etc.).
+          if (text.trim().length < 4) return null
+          return text
+        },
       },
-      scrollToLine(line: number) { term.scrollToLine(line) },
-      scrollToBottom() { term.scrollToBottom() },
-      getLine(y: number): string | null {
-        const line = term.buffer.active.getLine(y)
-        if (!line) return null
-        const text = line.translateToString(true)
-        // Filter trivial anchors so a wipe-and-redraw doesn't snap the
-        // user to the first stretch of separators or whitespace it
-        // finds. Four visible chars is enough to be distinctive without
-        // excluding short but meaningful lines ("DONE", "PASS", etc.).
-        if (text.trim().length < 4) return null
-        return text
-      },
-    })
+      { onPerfEvent: event => logTerminalPerf(session.id, event) },
+    )
     ;(window as any).__jumpTerm = term
     // Test-only inject hook: pumps bytes through the same path as ws.onmessage
     // (createTerminalIO.enqueue) bypassing the WebSocket and replay buffer.

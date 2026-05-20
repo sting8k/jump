@@ -1,6 +1,8 @@
 import { BSU, CSI_3J, ESU, containsSequence } from './replay'
 
 const WRITE_CALLBACK_WATCHDOG_MS = 2500
+const WRITE_BATCH_MAX_BYTES = 128 * 1024
+const WRITE_BATCH_MAX_CHUNKS = 32
 
 export interface TerminalWriter {
   write(data: string | Uint8Array, callback?: () => void): void
@@ -42,6 +44,29 @@ interface QueueItem {
   epoch: number
   data: Uint8Array
   onWritten?: () => void
+}
+
+interface WriteBatch {
+  epoch: number
+  data: Uint8Array
+  chunks: number
+  callbacks: Array<() => void>
+}
+
+export interface TerminalIOPerfEvent {
+  type: 'write'
+  /** Raw queued bytes before terminal probe stripping. */
+  bytes: number
+  /** Bytes actually passed to xterm.write after stripping non-screen probes. */
+  writtenBytes: number
+  chunks: number
+  queued: number
+  durationMs: number
+  timedOut: boolean
+}
+
+export interface TerminalIOOptions {
+  onPerfEvent?: (event: TerminalIOPerfEvent) => void
 }
 
 const XTGETTCAP_PREFIX = new Uint8Array([0x1b, 0x50, 0x2b, 0x71]) // ESC P + q
@@ -231,7 +256,11 @@ export interface TerminalIO {
  * from disrupting the user's scroll position while correctly tracking content
  * that shifts as old lines fall off the scrollback buffer.
  */
-export function createTerminalIO(term: TerminalWriter, scroll?: ScrollAccessor): TerminalIO {
+export function createTerminalIO(
+  term: TerminalWriter,
+  scroll?: ScrollAccessor,
+  options: TerminalIOOptions = {},
+): TerminalIO {
   let currentEpoch = 0
   let queue: QueueItem[] = []
   let writeInFlight = false
@@ -418,6 +447,40 @@ export function createTerminalIO(term: TerminalWriter, scroll?: ScrollAccessor):
     })
   }
 
+  const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now())
+
+  const makeBatch = (first: QueueItem): WriteBatch => {
+    const items = [first]
+    let bytes = first.data.length
+
+    while (queue.length && items.length < WRITE_BATCH_MAX_CHUNKS) {
+      const next = queue[0]
+      if (next.epoch !== first.epoch) break
+      if (bytes + next.data.length > WRITE_BATCH_MAX_BYTES) break
+      queue.shift()
+      items.push(next)
+      bytes += next.data.length
+    }
+
+    const callbacks = items.flatMap(item => item.onWritten ? [item.onWritten] : [])
+    if (items.length === 1) {
+      return { epoch: first.epoch, data: first.data, chunks: 1, callbacks }
+    }
+
+    const data = new Uint8Array(bytes)
+    let offset = 0
+    for (const item of items) {
+      data.set(item.data, offset)
+      offset += item.data.length
+    }
+    return { epoch: first.epoch, data, chunks: items.length, callbacks }
+  }
+
+  const completeBatchCallbacks = (batch: WriteBatch) => {
+    if (batch.epoch !== currentEpoch) return
+    for (const cb of batch.callbacks) cb()
+  }
+
   const clearWriteWatchdog = () => {
     if (writeWatchdog === null) return
     clearTimeout(writeWatchdog)
@@ -430,16 +493,18 @@ export function createTerminalIO(term: TerminalWriter, scroll?: ScrollAccessor):
 
     const next = queue.shift()
     if (next) {
-      let data = xtGetTcapStripper.push(next.data)
+      const batch = makeBatch(next)
+      let data = xtGetTcapStripper.push(batch.data)
       data = decrqmStripper.push(data)
       if (data.length === 0) {
-        if (next.epoch === currentEpoch) next.onWritten?.()
+        completeBatchCallbacks(batch)
         pump()
         return
       }
 
       writeInFlight = true
       const token = ++activeWriteToken
+      const startedAt = now()
       maybeSaveScroll(data)
       maybeMarkBufferReset(data)
 
@@ -447,9 +512,18 @@ export function createTerminalIO(term: TerminalWriter, scroll?: ScrollAccessor):
         if (token !== activeWriteToken || !writeInFlight) return
         clearWriteWatchdog()
         if (timedOut) console.warn('[jump] terminal write callback timed out; releasing output queue')
+        options.onPerfEvent?.({
+          type: 'write',
+          bytes: batch.data.length,
+          writtenBytes: data.length,
+          chunks: batch.chunks,
+          queued: queue.length,
+          durationMs: now() - startedAt,
+          timedOut,
+        })
         maybeRestoreScroll(data)
         writeInFlight = false
-        if (next.epoch === currentEpoch) next.onWritten?.()
+        completeBatchCallbacks(batch)
         pump()
       }
 

@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createTerminalIO, type ScrollAccessor } from './terminal-io'
+import { createTerminalIO, type ScrollAccessor, type TerminalIOOptions } from './terminal-io'
 import { BSU, CSI_3J, ESU } from './replay'
 
-function makeHarness() {
+function makeHarness(options?: TerminalIOOptions) {
   const writes: Array<string> = []
   const resizes: Array<{ cols: number, rows: number }> = []
   const pending: Array<() => void> = []
@@ -15,7 +15,7 @@ function makeHarness() {
     resize(cols, rows) {
       resizes.push({ cols, rows })
     },
-  })
+  }, undefined, options)
 
   return {
     io,
@@ -227,7 +227,7 @@ function wrapBSUWithClear(payload: string): Uint8Array {
 }
 
 describe('createTerminalIO', () => {
-  it('serializes writes one at a time', () => {
+  it('serializes writes while coalescing queued chunks', () => {
     const h = makeHarness()
     h.io.reset(1)
 
@@ -238,10 +238,10 @@ describe('createTerminalIO', () => {
     expect(h.writes).toEqual(['a'])
 
     h.flushOne()
-    expect(h.writes).toEqual(['a', 'b'])
+    expect(h.writes).toEqual(['a', 'bc'])
 
     h.flushOne()
-    expect(h.writes).toEqual(['a', 'b', 'c'])
+    expect(h.writes).toEqual(['a', 'bc'])
   })
 
   it('waits for queued writes before resizing', () => {
@@ -380,6 +380,32 @@ describe('createTerminalIO', () => {
     expect(h.writes).toEqual(['a\x1b[31mb'])
   })
 
+  it('reports coalesced write metrics', () => {
+    const events: Array<{ bytes: number, writtenBytes: number, chunks: number, timedOut: boolean }> = []
+    const h = makeHarness({
+      onPerfEvent: event => events.push({
+        bytes: event.bytes,
+        writtenBytes: event.writtenBytes,
+        chunks: event.chunks,
+        timedOut: event.timedOut,
+      }),
+    })
+    h.io.reset(1)
+
+    h.io.enqueue(enc('a'), 1)
+    h.io.enqueue(enc('b'), 1)
+    h.io.enqueue(enc('c'), 1)
+
+    h.flushOne()
+    expect(events).toEqual([{ bytes: 1, writtenBytes: 1, chunks: 1, timedOut: false }])
+
+    h.flushOne()
+    expect(events).toEqual([
+      { bytes: 1, writtenBytes: 1, chunks: 1, timedOut: false },
+      { bytes: 2, writtenBytes: 2, chunks: 2, timedOut: false },
+    ])
+  })
+
   it('runs completion callback after the final chunk in enqueueMany', () => {
     const h = makeHarness()
     const done = vi.fn()
@@ -388,7 +414,7 @@ describe('createTerminalIO', () => {
     h.io.enqueueMany([enc('a'), enc('b'), enc('c')], 1, done)
     h.flushAll()
 
-    expect(h.writes).toEqual(['a', 'b', 'c'])
+    expect(h.writes).toEqual(['abc'])
     expect(done).toHaveBeenCalledTimes(1)
   })
 })

@@ -33,6 +33,47 @@ func mustBindSocket(t *testing.T, sockPath string) net.Listener {
 	return ln
 }
 
+func TestEnqueueToClientsDropsSlowClientKeepsHealthy(t *testing.T) {
+	slowCtx, slowCancel := context.WithCancel(context.Background())
+	fastCtx, fastCancel := context.WithCancel(context.Background())
+	defer fastCancel()
+
+	slow := &wsClient{
+		ctx:    slowCtx,
+		cancel: slowCancel,
+		out:    make(chan wsFrame, 1),
+	}
+	slow.out <- wsFrame{typ: websocket.MessageBinary, data: []byte("queued")}
+
+	fast := &wsClient{
+		ctx:    fastCtx,
+		cancel: fastCancel,
+		out:    make(chan wsFrame, 1),
+	}
+
+	srv := &Server{perf: &perfStats{}}
+	srv.enqueueToClients([]*wsClient{slow, fast}, websocket.MessageBinary, []byte("live"))
+
+	select {
+	case <-slowCtx.Done():
+	case <-time.After(time.Second):
+		t.Fatal("expected full slow-client queue to cancel the client")
+	}
+
+	select {
+	case frame := <-fast.out:
+		if frame.typ != websocket.MessageBinary || string(frame.data) != "live" {
+			t.Fatalf("unexpected healthy-client frame: %#v %q", frame.typ, string(frame.data))
+		}
+	default:
+		t.Fatal("expected healthy client to receive live output")
+	}
+
+	if got := srv.perf.snapshot().WSSlowClientDrops; got != 1 {
+		t.Fatalf("WSSlowClientDrops = %d, want 1", got)
+	}
+}
+
 func TestCoalesceDelayAdaptsToAccumulatedOutput(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -119,6 +160,49 @@ func TestPTYServerBasicOutput(t *testing.T) {
 
 	if srv.ExitCode() != 0 {
 		t.Errorf("expected exit code 0, got %d", srv.ExitCode())
+	}
+}
+
+func TestDebugPerfEndpointReportsTerminalStats(t *testing.T) {
+	sockPath := filepath.Join(t.TempDir(), "test.sock")
+
+	srv, err := New(Config{
+		Command:    []string{"bash", "-c", "printf hello-from-perf"},
+		Cwd:        "/tmp",
+		Listener:   mustBindSocket(t, sockPath),
+		SocketPath: sockPath,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer srv.Shutdown()
+
+	select {
+	case <-srv.PTYDone():
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for PTY drain")
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				return net.Dial("unix", sockPath)
+			},
+		},
+	}
+
+	resp, err := client.Get("http://unix/debug/perf")
+	if err != nil {
+		t.Fatalf("GET /debug/perf: %v", err)
+	}
+	defer resp.Body.Close()
+
+	var snap perfSnapshot
+	if err := json.NewDecoder(resp.Body).Decode(&snap); err != nil {
+		t.Fatalf("decode perf snapshot: %v", err)
+	}
+	if snap.PTYFlushes == 0 || snap.PTYBytes == 0 {
+		t.Fatalf("expected PTY metrics, got %+v", snap)
 	}
 }
 
