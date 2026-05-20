@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/charmbracelet/x/ansi"
 	"github.com/sting8k/jump/packages/scrollback"
 	"nhooyr.io/websocket"
 )
@@ -275,9 +276,9 @@ func TestPTYServerResize(t *testing.T) {
 func TestPTYServerInput(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "test.sock")
 
-	// cat will echo back what we send
+	// Child prints a readiness marker, then echoes back what we send.
 	srv, err := New(Config{
-		Command:    []string{"bash", "-c", "read line; echo got:$line"},
+		Command:    []string{"bash", "-c", "printf 'ready\\n'; read line; echo got:$line"},
 		Cwd:        "/tmp",
 		Listener:   mustBindSocket(t, sockPath),
 		SocketPath: sockPath,
@@ -321,8 +322,25 @@ func TestPTYServerInput(t *testing.T) {
 		}
 	}()
 
-	// Wait for the initial prompt to settle before sending input.
-	time.Sleep(100 * time.Millisecond)
+	// Wait for the child to reach read() instead of sleeping and guessing.
+	deadlineReady := time.After(3 * time.Second)
+	for {
+		time.Sleep(50 * time.Millisecond)
+		mu.Lock()
+		ready := contains(got, "ready")
+		mu.Unlock()
+		if ready {
+			break
+		}
+		select {
+		case <-deadlineReady:
+			mu.Lock()
+			gotText := string(got)
+			mu.Unlock()
+			t.Fatalf("expected child readiness marker, got: %q", gotText)
+		default:
+		}
+	}
 
 	// Send input
 	err = conn.Write(ctx, websocket.MessageBinary, []byte("hello\n"))
@@ -367,7 +385,7 @@ func TestInputEndpoint(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "test.sock")
 
 	srv, err := New(Config{
-		Command:    []string{"bash", "-c", "read line; echo got:$line"},
+		Command:    []string{"bash", "-c", "printf 'ready\\n'; read line; echo got:$line"},
 		Cwd:        "/tmp",
 		Listener:   mustBindSocket(t, sockPath),
 		SocketPath: sockPath,
@@ -377,12 +395,6 @@ func TestInputEndpoint(t *testing.T) {
 	}
 	defer srv.Shutdown()
 
-	// Give the child a moment to issue its read() syscall before we
-	// deliver bytes. Without this the bytes arrive before the read
-	// is posted and get dropped by the tty canonical mode buffer on
-	// some kernels.
-	time.Sleep(100 * time.Millisecond)
-
 	client := &http.Client{
 		Transport: &http.Transport{
 			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
@@ -390,6 +402,41 @@ func TestInputEndpoint(t *testing.T) {
 			},
 		},
 		Timeout: 2 * time.Second,
+	}
+
+	// Observe the child's echo via a WS attach. We intentionally mix
+	// channels — posting via HTTP and observing via WS — because that's
+	// also what `jump --send` does (POST) while another client (the web UI
+	// or `jump --attach`) reads (WS). Wait for the child to print `ready`
+	// instead of sleeping and guessing when the read() syscall is posted.
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(ctx, "ws://localhost/", &websocket.DialOptions{
+		HTTPClient: client,
+	})
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
+
+	var got []byte
+	readUntil := func(marker string) bool {
+		deadline := time.Now().Add(3 * time.Second)
+		for time.Now().Before(deadline) {
+			_, data, err := conn.Read(ctx)
+			if err != nil {
+				break
+			}
+			got = append(got, data...)
+			if contains(got, marker) {
+				return true
+			}
+		}
+		return false
+	}
+
+	if !readUntil("ready") {
+		t.Fatalf("expected child readiness marker, got: %q", string(got))
 	}
 
 	resp, err := client.Post("http://session/input", "application/octet-stream",
@@ -402,33 +449,9 @@ func TestInputEndpoint(t *testing.T) {
 		t.Fatalf("status = %d, want 204", resp.StatusCode)
 	}
 
-	// Observe the child's echo via a WS attach. We intentionally don't
-	// mix channels — posting via HTTP and observing via WS — because
-	// that's also what `jump --send` does (POST) while another client
-	// (the web UI or `jump --attach`) reads (WS).
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	conn, _, err := websocket.Dial(ctx, "ws://localhost/", &websocket.DialOptions{
-		HTTPClient: client,
-	})
-	if err != nil {
-		t.Fatalf("dial: %v", err)
+	if !readUntil("got:hello") {
+		t.Errorf("expected 'got:hello' in output, got: %q", string(got))
 	}
-	defer conn.Close(websocket.StatusNormalClosure, "")
-
-	var got []byte
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		_, data, err := conn.Read(ctx)
-		if err != nil {
-			break
-		}
-		got = append(got, data...)
-		if contains(got, "got:hello") {
-			return
-		}
-	}
-	t.Errorf("expected 'got:hello' in output, got: %q", string(got))
 }
 
 // TestInputEndpointEmpty covers the degenerate case: POSTing nothing
@@ -1045,7 +1068,7 @@ func stringContains(s, sub string) bool {
 // response-drain goroutine, Write blocks forever because the emulator
 // writes the response to an internal pipe that nobody reads.
 func TestNewScreenDSRNonBlocking(t *testing.T) {
-	screen := newScreen(80, 24, func(bool) {})
+	screen := newScreen(80, 24, func(bool) {}, nil)
 	defer screen.Close()
 
 	done := make(chan struct{})
@@ -1063,10 +1086,51 @@ func TestNewScreenDSRNonBlocking(t *testing.T) {
 	}
 }
 
+func TestTerminalModeReplayTracksMouseModes(t *testing.T) {
+	srv := &Server{activeModes: make(map[ansi.Mode]bool)}
+	screen := newScreen(80, 24, func(bool) {}, func(mode ansi.Mode, enabled bool) {
+		if enabled {
+			srv.activeModes[mode] = true
+		} else {
+			delete(srv.activeModes, mode)
+		}
+	})
+	defer screen.Close()
+
+	// Interactive TUIs commonly enable one mouse tracking mode plus SGR
+	// coordinate encoding once at startup. A browser that reconnects after
+	// that startup sequence must receive those modes again or xterm treats
+	// clicks as local selection instead of sending mouse input to the PTY.
+	_, _ = screen.Write([]byte(ansi.SetMode(
+		ansi.ModeMouseButtonEvent,
+		ansi.ModeMouseExtSgr,
+		ansi.ModeBracketedPaste,
+	)))
+
+	got := srv.terminalModeReplayLocked()
+	wantSet := ansi.SetMode(ansi.ModeMouseButtonEvent, ansi.ModeMouseExtSgr, ansi.ModeBracketedPaste)
+	if !strings.Contains(got, wantSet) {
+		t.Fatalf("mode replay %q missing active set %q", got, wantSet)
+	}
+
+	_, _ = screen.Write([]byte(ansi.ResetMode(ansi.ModeMouseButtonEvent)))
+	got = srv.terminalModeReplayLocked()
+	if !strings.Contains(got, ansi.ResetMode(replayableTerminalModes...)) {
+		t.Fatalf("replay should reset all replayable modes first: %q", got)
+	}
+	wantSet = ansi.SetMode(ansi.ModeMouseExtSgr, ansi.ModeBracketedPaste)
+	if !strings.Contains(got, wantSet) {
+		t.Fatalf("unrelated active modes were lost: %q", got)
+	}
+	if strings.Contains(got, ansi.SetMode(ansi.ModeMouseButtonEvent)) {
+		t.Fatalf("disabled mouse mode was set in replay: %q", got)
+	}
+}
+
 // TestRenderScreenIncludesScrollback verifies that renderScreen includes
 // lines that scrolled off the top of the screen, not just the visible rows.
 func TestRenderScreenIncludesScrollback(t *testing.T) {
-	screen := newScreen(80, 5, func(bool) {})
+	screen := newScreen(80, 5, func(bool) {}, nil)
 	defer screen.Close()
 
 	// Write 10 lines through a 5-row terminal: lines 1-5 scroll off,
@@ -1089,7 +1153,7 @@ func TestRenderScreenIncludesScrollback(t *testing.T) {
 // filled screen has exactly Height-1 CRLF separators (no extra blank rows
 // from buffer growth) and that adding scrollback increases the total.
 func TestRenderScreenLineCount(t *testing.T) {
-	screen := newScreen(40, 5, func(bool) {})
+	screen := newScreen(40, 5, func(bool) {}, nil)
 	defer screen.Close()
 
 	// Write 3 short lines, staying within the 5-row screen.
@@ -1105,7 +1169,7 @@ func TestRenderScreenLineCount(t *testing.T) {
 	}
 
 	// Now push content into scrollback: write 10 lines through a 5-row terminal.
-	screen2 := newScreen(40, 5, func(bool) {})
+	screen2 := newScreen(40, 5, func(bool) {}, nil)
 	defer screen2.Close()
 	for i := 1; i <= 10; i++ {
 		fmt.Fprintf(screen2, "Line-%02d\r\n", i)
@@ -1181,6 +1245,54 @@ func TestPTYServerDeferredScreenSync(t *testing.T) {
 
 	if !contains(got, "deferred-sync-marker") {
 		t.Errorf("snapshot should contain marker after deferred sync, got: %q", string(got))
+	}
+}
+
+func TestPTYServerSnapshotReplaysTerminalModes(t *testing.T) {
+	sockPath := filepath.Join(t.TempDir(), "test.sock")
+
+	srv, err := New(Config{
+		Command:    []string{"bash", "-c", "printf '\\033[?1002h\\033[?1006hmode-replay-marker'; sleep 5"},
+		Cwd:        "/tmp",
+		Listener:   mustBindSocket(t, sockPath),
+		SocketPath: sockPath,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer srv.Shutdown()
+
+	time.Sleep(400 * time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, _, err := websocket.Dial(ctx, "ws://localhost/", &websocket.DialOptions{
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+					return net.Dial("unix", sockPath)
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
+
+	readCtx, readCancel := context.WithTimeout(ctx, time.Second)
+	_, data, err := conn.Read(readCtx)
+	readCancel()
+	if err != nil {
+		t.Fatalf("read snapshot: %v", err)
+	}
+
+	got := string(data)
+	for _, want := range []string{"?1002", "1006", "mode-replay-marker"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("snapshot frame missing %q: %q", want, got)
+		}
 	}
 }
 

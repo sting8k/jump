@@ -21,6 +21,7 @@ import (
 	"time"
 
 	uv "github.com/charmbracelet/ultraviolet"
+	"github.com/charmbracelet/x/ansi"
 	"github.com/charmbracelet/x/vt"
 	"github.com/creack/pty"
 	"github.com/sting8k/jump/cli/jump/internal/session"
@@ -42,6 +43,22 @@ const wsWriteTimeout = 3 * time.Second
 // cannot keep up is cancelled so it cannot stall PTY output delivery to local
 // terminal output or other browser clients.
 const outboundQueueLimit = 64
+
+var replayableTerminalModes = []ansi.Mode{
+	ansi.ModeCursorKeys,
+	ansi.ModeNumericKeypad,
+	ansi.ModeMouseX10,
+	ansi.ModeMouseNormal,
+	ansi.ModeMouseHighlight,
+	ansi.ModeMouseButtonEvent,
+	ansi.ModeMouseAnyEvent,
+	ansi.ModeFocusEvent,
+	ansi.ModeMouseExtUtf8,
+	ansi.ModeMouseExtSgr,
+	ansi.ModeMouseExtUrxvt,
+	ansi.ModeMouseExtSgrPixel,
+	ansi.ModeBracketedPaste,
+}
 
 type enqueueResult int
 
@@ -106,7 +123,7 @@ func probeSocket(sockPath string) bool {
 	return true
 }
 
-func newScreen(cols, rows int, cursorCb func(visible bool)) *vt.Emulator {
+func newScreen(cols, rows int, cursorCb func(visible bool), modeCb func(mode ansi.Mode, enabled bool)) *vt.Emulator {
 	// Default to 80x24 when launched non-interactively (no terminal).
 	// The first resize from a connecting client will set the real size.
 	if cols <= 0 {
@@ -119,6 +136,16 @@ func newScreen(cols, rows int, cursorCb func(visible bool)) *vt.Emulator {
 	e.SetScrollbackSize(maxScrollback)
 	e.SetCallbacks(vt.Callbacks{
 		CursorVisibility: cursorCb,
+		EnableMode: func(mode ansi.Mode) {
+			if modeCb != nil {
+				modeCb(mode, true)
+			}
+		},
+		DisableMode: func(mode ansi.Mode) {
+			if modeCb != nil {
+				modeCb(mode, false)
+			}
+		},
 	})
 	// The emulator writes responses (e.g. DSR cursor position reports)
 	// to an internal pipe. If nothing reads them, Write blocks. We don't
@@ -185,13 +212,14 @@ type Server struct {
 
 	mu             sync.Mutex
 	clients        map[*wsClient]struct{}
-	localOut       io.Writer      // optional local terminal output sink
-	scrollback     io.WriteCloser // optional persistent scrollback sink (closed in waitChild)
-	ptyCols        uint16         // last applied PTY cols (guarded by mu)
-	ptyRows        uint16         // last applied PTY rows (guarded by mu)
-	cursorHidden   bool           // tracks DECTCEM via callback (guarded by mu)
-	screenPending  []byte         // raw PTY data not yet fed to screen (guarded by mu)
-	lastClientLeft time.Time      // when the last WS client disconnected (guarded by mu)
+	localOut       io.Writer          // optional local terminal output sink
+	scrollback     io.WriteCloser     // optional persistent scrollback sink (closed in waitChild)
+	ptyCols        uint16             // last applied PTY cols (guarded by mu)
+	ptyRows        uint16             // last applied PTY rows (guarded by mu)
+	cursorHidden   bool               // tracks DECTCEM via callback (guarded by mu)
+	activeModes    map[ansi.Mode]bool // app-enabled terminal modes replayed on reconnect (guarded by mu)
+	screenPending  []byte             // raw PTY data not yet fed to screen (guarded by mu)
+	lastClientLeft time.Time          // when the last WS client disconnected (guarded by mu)
 
 	done    chan struct{} // closed when child exits
 	ptyDone chan struct{} // closed when readPTY finishes draining
@@ -315,27 +343,39 @@ func New(cfg Config) (*Server, error) {
 	}
 
 	s := &Server{
-		cmd:        cmd,
-		ptmx:       ptmx,
-		sockPath:   cfg.SocketPath,
-		listener:   listener,
-		screen:     nil, // set below after s is constructed
-		adapter:    cfg.Adapter,
-		state:      cfg.State,
-		perf:       &perfStats{},
-		clients:    make(map[*wsClient]struct{}),
-		localOut:   cfg.LocalOut,   // wired before readPTY starts so early output is never lost
-		scrollback: cfg.Scrollback, // same: wired pre-readPTY so fast-exit output is never lost
-		ptyCols:    cfg.Cols,
-		ptyRows:    cfg.Rows,
-		done:       make(chan struct{}),
-		ptyDone:    make(chan struct{}),
+		cmd:         cmd,
+		ptmx:        ptmx,
+		sockPath:    cfg.SocketPath,
+		listener:    listener,
+		screen:      nil, // set below after s is constructed
+		adapter:     cfg.Adapter,
+		state:       cfg.State,
+		perf:        &perfStats{},
+		clients:     make(map[*wsClient]struct{}),
+		localOut:    cfg.LocalOut,   // wired before readPTY starts so early output is never lost
+		scrollback:  cfg.Scrollback, // same: wired pre-readPTY so fast-exit output is never lost
+		ptyCols:     cfg.Cols,
+		ptyRows:     cfg.Rows,
+		activeModes: make(map[ansi.Mode]bool),
+		done:        make(chan struct{}),
+		ptyDone:     make(chan struct{}),
 	}
 
 	// The callback fires under s.mu (held during drainScreenLocked → screen.Write).
-	s.screen = newScreen(int(cfg.Cols), int(cfg.Rows), func(visible bool) {
-		s.cursorHidden = !visible
-	})
+	s.screen = newScreen(
+		int(cfg.Cols),
+		int(cfg.Rows),
+		func(visible bool) {
+			s.cursorHidden = !visible
+		},
+		func(mode ansi.Mode, enabled bool) {
+			if enabled {
+				s.activeModes[mode] = true
+			} else {
+				delete(s.activeModes, mode)
+			}
+		},
+	)
 
 	go s.readPTY()
 	go s.waitChild()
@@ -348,6 +388,21 @@ func New(cfg Config) (*Server, error) {
 // drainScreenLocked feeds all pending raw PTY data to the virtual terminal
 // emulator. This is the only place where screen.Write is called, ensuring the
 // emulator stays off the hot path (readPTY flush). Caller must hold s.mu.
+func (s *Server) terminalModeReplayLocked() string {
+	active := make([]ansi.Mode, 0, len(replayableTerminalModes))
+	for _, mode := range replayableTerminalModes {
+		if s.activeModes[mode] {
+			active = append(active, mode)
+		}
+	}
+
+	seq := ansi.ResetMode(replayableTerminalModes...)
+	if len(active) > 0 {
+		seq += ansi.SetMode(active...)
+	}
+	return seq
+}
+
 func (s *Server) drainScreenLocked() {
 	if len(s.screenPending) == 0 {
 		return
@@ -799,6 +854,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	s.drainScreenLocked()
 	renderStart := time.Now()
+	modeSeq := s.terminalModeReplayLocked()
 	snapshot := renderScreen(s.screen)
 	cursorSeq := "\x1b[?25h" // show cursor (default)
 	if s.cursorHidden {
@@ -810,7 +866,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	bsu := "\x1b[?2026h"                     // Begin Synchronized Update
 	resetSeq := "\x1b[r\x1b[H\x1b[2J\x1b[3J" // Reset scroll region + cursor home + erase display + erase scrollback
 	esu := "\x1b[?2026l"                     // End Synchronized Update
-	frame := []byte(bsu + resetSeq + snapshot + cursorPos + cursorSeq + esu)
+	frame := []byte(bsu + modeSeq + resetSeq + snapshot + cursorPos + cursorSeq + esu)
 	s.perf.observeSnapshotRender(len(frame), time.Since(renderStart))
 	s.clients[client] = struct{}{}
 	s.lastClientLeft = time.Time{} // reset: we have an active viewer
