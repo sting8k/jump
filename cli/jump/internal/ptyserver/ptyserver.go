@@ -395,9 +395,8 @@ func New(cfg Config) (*Server, error) {
 	return s, nil
 }
 
-// drainScreenLocked feeds all pending raw PTY data to the virtual terminal
-// emulator. This is the only place where screen.Write is called, ensuring the
-// emulator stays off the hot path (readPTY flush). Caller must hold s.mu.
+// terminalModeReplayLocked builds the terminal input-mode reset/replay prefix
+// sent before reconnect snapshots. Caller must hold s.mu.
 func (s *Server) terminalModeReplayLocked() string {
 	active := make([]ansi.Mode, 0, len(replayableTerminalModes))
 	for _, mode := range replayableTerminalModes {
@@ -413,6 +412,9 @@ func (s *Server) terminalModeReplayLocked() string {
 	return seq
 }
 
+// drainScreenLocked feeds all pending raw PTY data to the virtual terminal
+// emulator. This is the only place where screen.Write is called, ensuring the
+// emulator stays off the hot path (readPTY flush). Caller must hold s.mu.
 func (s *Server) drainScreenLocked() {
 	if len(s.screenPending) == 0 {
 		return
@@ -864,7 +866,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// the scrollback history followed by the visible screen as ANSI
 	// sequences with style diffing.
 	//
-	// Sequence: BSU → reset → scrollback + screen → cursor → ESU
+	// Sequence: BSU → input modes → reset → scrollback + screen → cursor → ESU
 	s.mu.Lock()
 	s.drainScreenLocked()
 	renderStart := time.Now()

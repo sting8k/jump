@@ -1290,19 +1290,31 @@ func TestPTYServerDeferredScreenSync(t *testing.T) {
 
 func TestPTYServerSnapshotReplaysTerminalModes(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "test.sock")
+	localOut := &syncBuffer{}
 
 	srv, err := New(Config{
 		Command:    []string{"bash", "-c", "printf '\\033[?1002h\\033[?1006hmode-replay-marker'; sleep 5"},
 		Cwd:        "/tmp",
 		Listener:   mustBindSocket(t, sockPath),
 		SocketPath: sockPath,
+		LocalOut:   localOut,
 	})
 	if err != nil {
 		t.Fatalf("new server: %v", err)
 	}
 	defer srv.Shutdown()
 
-	time.Sleep(400 * time.Millisecond)
+	deadline := time.Now().Add(3 * time.Second)
+	for !strings.Contains(localOut.String(), "mode-replay-marker") {
+		if time.Now().After(deadline) {
+			t.Fatalf("expected child startup marker, got: %q", localOut.String())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	srv.mu.Lock()
+	srv.drainScreenLocked()
+	srv.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
