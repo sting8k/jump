@@ -45,7 +45,7 @@ func TestSaveAndLoad(t *testing.T) {
 }
 
 func TestNormalizeAppearanceAcceptsKnownThemes(t *testing.T) {
-	for _, themeID := range []string{SpacetimeThemeID, VercelThemeID} {
+	for _, themeID := range []string{SpacetimeThemeID, VercelThemeID, AtelierThemeID} {
 		t.Run(themeID, func(t *testing.T) {
 			appearance, err := NormalizeAppearance(Appearance{ThemeID: themeID})
 			if err != nil {

@@ -15,6 +15,7 @@ const (
 	DefaultThemeID   = "default"
 	SpacetimeThemeID = "spacetime"
 	VercelThemeID    = "vercel"
+	AtelierThemeID   = "atelier"
 )
 
 var (
@@ -25,6 +26,7 @@ var (
 		DefaultThemeID:   {},
 		SpacetimeThemeID: {},
 		VercelThemeID:    {},
+		AtelierThemeID:   {},
 	}
 )
 
