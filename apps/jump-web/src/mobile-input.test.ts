@@ -87,6 +87,22 @@ function createFakeContainer() {
   }
 }
 
+function createFakeTerminal(textarea: ReturnType<typeof createFakeTextarea>) {
+  let onDataListener: ((data: string) => void) | null = null
+  const disposeData = vi.fn(() => { onDataListener = null })
+  return {
+    textarea,
+    onData(fn: (data: string) => void) {
+      onDataListener = fn
+      return { dispose: disposeData }
+    },
+    emitData(data: string) {
+      onDataListener?.(data)
+    },
+    disposeData,
+  }
+}
+
 /**
  * Simulate the browser event flow for an input event:
  * 1. beforeinput fires on textarea
@@ -162,6 +178,7 @@ function simulateAndroidAutocorrect(
 describe('attachMobileInputHandler', () => {
   let textarea: ReturnType<typeof createFakeTextarea>
   let container: ReturnType<typeof createFakeContainer>
+  let term: ReturnType<typeof createFakeTerminal>
   let sent: string
   let send: (data: string) => void
   let dispose: () => void
@@ -169,10 +186,11 @@ describe('attachMobileInputHandler', () => {
   beforeEach(() => {
     textarea = createFakeTextarea()
     container = createFakeContainer()
+    term = createFakeTerminal(textarea)
     sent = ''
     send = (data) => { sent += data }
     dispose = attachMobileInputHandler(
-      { textarea } as any,
+      term as any,
       container as any,
       send,
     )
@@ -350,6 +368,28 @@ describe('attachMobileInputHandler', () => {
     expect(textarea.value).toBe('helo world')
   })
 
+  it('keeps textarea in sync after terminal backspaces before the next Telex replacement', () => {
+    textarea.value = 'hello vie'
+    textarea.selectionStart = textarea.selectionEnd = 9
+
+    term.emitData('\x7f\x7f\x7f')
+
+    expect(textarea.value).toBe('hello ')
+    expect(textarea.selectionStart).toBe(6)
+
+    simulateInput(textarea, container, 'insertText', 'b')
+    simulateInput(textarea, container, 'insertText', 'i')
+    sent = ''
+    textarea.selectionStart = 7
+    textarea.selectionEnd = 8
+
+    const { stoppedBeforeXterm } = simulateAndroidAutocorrect(textarea, container, 'ị')
+
+    expect(stoppedBeforeXterm).toBe(true)
+    expect(sent).toBe('\x7fị')
+    expect(textarea.value).toBe('hello bi')
+  })
+
   it('does not treat collapsed backspace + typing as autocorrect', () => {
     // Non-collapsed delete sets tracking
     textarea.value = 'hello world'
@@ -497,7 +537,7 @@ describe('attachMobileInputHandler', () => {
 
     const desktopSent: string[] = []
     const desktopDispose = attachMobileInputHandler(
-      { textarea } as any,
+      createFakeTerminal(textarea) as any,
       container as any,
       (data) => { desktopSent.push(data) },
     )

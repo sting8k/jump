@@ -55,6 +55,7 @@ type SendFn = (data: string) => void
 interface PendingReplacement {
   newText: string
   suffix: string
+  nextValue: string
   /** When set, reset textarea.value after sending to neutralize xterm's
    *  _handleAnyTextareaChanges deferred diff (Android keyCode-229 path). */
   resetValue?: string
@@ -101,6 +102,7 @@ export function attachMobileInputHandler(
   let pending: PendingReplacement | null = null
   let trackedDeletion: TrackedDeletion | null = null
   let composing = false
+  let resetSyncTimer: ReturnType<typeof setTimeout> | null = null
 
   /** Queue a replacement for phase 2 and send the necessary backspaces now. */
   const queueReplacement = (
@@ -110,9 +112,43 @@ export function attachMobileInputHandler(
     newText: string,
     resetValue?: string,
   ) => {
+    const suffix = value.substring(selEnd)
     send('\x7f'.repeat(value.length - selStart))
-    pending = { newText, suffix: value.substring(selEnd), resetValue }
+    pending = {
+      newText,
+      suffix,
+      nextValue: value.substring(0, selStart) + newText + suffix,
+      resetValue,
+    }
   }
+
+  const syncTextareaForTerminalData = (data: string) => {
+    if (!isTouchPrimary || composing || pending) return
+
+    let value = textarea.value
+    let start = textarea.selectionStart ?? value.length
+    let end = textarea.selectionEnd ?? start
+    let changed = false
+
+    for (const ch of data) {
+      if (ch !== '\x7f' && ch !== '\b') continue
+
+      if (start < end) {
+        value = value.substring(0, start) + value.substring(end)
+      } else if (start > 0) {
+        value = value.substring(0, start - 1) + value.substring(end)
+        start--
+      }
+      end = start
+      changed = true
+    }
+
+    if (!changed) return
+    textarea.value = value
+    textarea.selectionStart = textarea.selectionEnd = start
+  }
+
+  const dataDisposable = term.onData(syncTextareaForTerminalData)
 
   /** Extract inserted text from a beforeinput event. */
   const resolveText = (ev: InputEvent) =>
@@ -188,7 +224,7 @@ export function attachMobileInputHandler(
       return
     }
     if (!pending) return
-    const { newText, suffix, resetValue } = pending
+    const { newText, suffix, nextValue, resetValue } = pending
     pending = null
 
     // Prevent xterm's _inputEvent from also sending ev.data.
@@ -201,8 +237,19 @@ export function attachMobileInputHandler(
     // captured this same value as oldValue and will diff against it in a
     // deferred setTimeout(0). By restoring it, the diff sees no change.
     if (resetValue !== undefined) {
+      if (resetSyncTimer !== null) clearTimeout(resetSyncTimer)
+      // First restore the value xterm captured before this Android keyCode-229
+      // replacement so its deferred diff sees no change. Then, after that
+      // timeout has had a chance to run, put the textarea back in sync with the
+      // logical terminal line. Without this second sync, later backspace + Telex
+      // corrections use stale selection offsets and erase too much text.
       textarea.value = resetValue
       textarea.selectionStart = textarea.selectionEnd = resetValue.length
+      resetSyncTimer = setTimeout(() => {
+        textarea.value = nextValue
+        textarea.selectionStart = textarea.selectionEnd = nextValue.length
+        resetSyncTimer = null
+      }, 0)
     }
   }
 
@@ -213,6 +260,8 @@ export function attachMobileInputHandler(
 
   return () => {
     pointerQuery.removeEventListener('change', onPointerChange)
+    dataDisposable.dispose()
+    if (resetSyncTimer !== null) clearTimeout(resetSyncTimer)
     textarea.removeEventListener('compositionstart', onCompositionStart, { capture: true })
     textarea.removeEventListener('compositionend', onCompositionEnd, { capture: true })
     textarea.removeEventListener('beforeinput', onBeforeInput, { capture: true })

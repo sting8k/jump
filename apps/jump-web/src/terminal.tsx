@@ -15,7 +15,12 @@ import { decideViewportResize, sameSize } from './terminal-resize'
 import { MOCK_BY_ID } from './mock-data/index'
 import type { Session } from './types'
 import { isCoarsePointerDevice, isSoftKeyboardLikelyOpen } from './input-device'
-import { normalizeTerminalInput } from './terminal-input'
+import {
+  beginTerminalComposition,
+  createTerminalCompositionInputState,
+  filterTerminalInputData,
+  finishTerminalComposition,
+} from './terminal-input'
 
 // ── Config ──
 
@@ -257,6 +262,8 @@ export function TerminalView({
   const termEpochRef = useRef(0)
   const lastInputAtRef = useRef(0)
   const composingRef = useRef(false)
+  const compositionInputRef = useRef(createTerminalCompositionInputState())
+  const compositionSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // True once the terminal's font is downloaded; gates xterm mount.
   // See the preload effect below for why this matters.
@@ -571,19 +578,78 @@ export function TerminalView({
     textarea?.setAttribute('autocapitalize', 'none')
     textarea?.setAttribute('spellcheck', 'false')
     textarea?.setAttribute('enterkeyhint', 'enter')
-    const handleCompositionStart = () => { composingRef.current = true }
-    const handleCompositionEnd = () => {
-      composingRef.current = false
+    const clearCompositionSuppressTimer = () => {
+      if (compositionSuppressTimerRef.current === null) return
+      clearTimeout(compositionSuppressTimerRef.current)
+      compositionSuppressTimerRef.current = null
+    }
+    const clearCompositionSuppressData = () => {
+      compositionInputRef.current.suppressNextData = null
+      compositionSuppressTimerRef.current = null
+    }
+    const scheduleCompositionSuppressClear = () => {
+      clearCompositionSuppressTimer()
+      compositionSuppressTimerRef.current = setTimeout(clearCompositionSuppressData, 0)
+    }
+    const markCompositionActive = () => {
+      clearCompositionSuppressTimer()
+      beginTerminalComposition(compositionInputRef.current)
+      composingRef.current = true
       lastInputAtRef.current = performance.now()
     }
+    const commitCompositionData = (data: string) => {
+      composingRef.current = false
+      lastInputAtRef.current = performance.now()
+      const committed = finishTerminalComposition(compositionInputRef.current, data)
+      if (!committed) return
+      sendInput(committed)
+      scheduleCompositionSuppressClear()
+    }
+    const isCompositionUpdate = (ev: InputEvent) => {
+      return ev.isComposing
+        || ev.inputType === 'insertCompositionText'
+        || ev.inputType === 'deleteCompositionText'
+    }
+    const isCompositionCommit = (ev: InputEvent) => {
+      return ev.inputType === 'insertText'
+        || ev.inputType === 'insertReplacementText'
+        || ev.inputType === 'insertFromComposition'
+    }
+    const handleCompositionStart = () => { markCompositionActive() }
+    const handleCompositionEnd = (ev: CompositionEvent) => { commitCompositionData(ev.data) }
+    const handleBeforeInputCapture = (ev: Event) => {
+      const inputEvent = ev as InputEvent
+      if (isCompositionUpdate(inputEvent)) markCompositionActive()
+    }
+    const handleInputCapture = (ev: Event) => {
+      const inputEvent = ev as InputEvent
+      if (isCompositionUpdate(inputEvent)) {
+        markCompositionActive()
+        return
+      }
+      if (!compositionInputRef.current.composing) return
+      if (isCompositionCommit(inputEvent) && inputEvent.data) {
+        commitCompositionData(inputEvent.data)
+        return
+      }
+      composingRef.current = false
+      compositionInputRef.current.composing = false
+    }
     const syncKeyboardActive = () => onKeyboardActiveChange?.(document.activeElement === textarea)
+    const inputHost = containerRef.current!
+    inputHost.addEventListener('beforeinput', handleBeforeInputCapture, { capture: true })
+    inputHost.addEventListener('input', handleInputCapture, { capture: true })
     textarea?.addEventListener('focus', syncKeyboardActive)
     textarea?.addEventListener('blur', syncKeyboardActive)
     textarea?.addEventListener('compositionstart', handleCompositionStart)
     textarea?.addEventListener('compositionend', handleCompositionEnd)
     syncKeyboardActive()
 
-    const dataDisposable = term.onData((data) => sendInput(normalizeTerminalInput(data)))
+    const dataDisposable = term.onData((data) => {
+      const filtered = filterTerminalInputData(compositionInputRef.current, data)
+      if (filtered === null) return
+      sendInput(filtered)
+    })
     attachKeyboardHandler(term, sendInput, sendRawInput, keybinds, macCommandIsCtrl, session.id)
     const disposePasteHandler = attachPasteHandler(term, containerRef.current!, sendRawInput, session.id)
     const disposeMobileHandler = attachMobileInputHandler(term, containerRef.current!, sendRawInput)
@@ -849,12 +915,17 @@ export function TerminalView({
       onKeyboardToggleReady?.(null)
       onKeyboardHideReady?.(null)
       onKeyboardActiveChange?.(false)
+      inputHost.removeEventListener('beforeinput', handleBeforeInputCapture, true)
+      inputHost.removeEventListener('input', handleInputCapture, true)
       const textarea = term.textarea
       textarea?.removeEventListener('focus', syncKeyboardActive)
       textarea?.removeEventListener('blur', syncKeyboardActive)
       textarea?.removeEventListener('compositionstart', handleCompositionStart)
       textarea?.removeEventListener('compositionend', handleCompositionEnd)
+      clearCompositionSuppressTimer()
       composingRef.current = false
+      compositionInputRef.current.composing = false
+      compositionInputRef.current.suppressNextData = null
       if ((window as any).__jumpTerm === term) (window as any).__jumpTerm = null
       ;(window as any).__jumpInject = null
       term.dispose()

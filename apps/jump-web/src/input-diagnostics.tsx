@@ -18,8 +18,50 @@ import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { TERM_THEME } from './terminal'
+import { isCoarsePointerDevice } from './input-device'
 
 // ── Types ──
+
+function focusDiagnosticTerminal(term: Terminal | null): void {
+  if (!term) return
+
+  term.focus()
+
+  const textarea = term.textarea
+  if (!textarea || !isCoarsePointerDevice()) return
+
+  const prev = {
+    position: textarea.style.position,
+    left: textarea.style.left,
+    bottom: textarea.style.bottom,
+    top: textarea.style.top,
+    width: textarea.style.width,
+    height: textarea.style.height,
+    opacity: textarea.style.opacity,
+    zIndex: textarea.style.zIndex,
+  }
+
+  textarea.style.position = 'fixed'
+  textarea.style.left = '0'
+  textarea.style.bottom = '0'
+  textarea.style.top = 'auto'
+  textarea.style.width = '1px'
+  textarea.style.height = '1px'
+  textarea.style.opacity = '0.01'
+  textarea.style.zIndex = '-1'
+  textarea.focus({ preventScroll: true })
+
+  requestAnimationFrame(() => {
+    textarea.style.position = prev.position
+    textarea.style.left = prev.left
+    textarea.style.bottom = prev.bottom
+    textarea.style.top = prev.top
+    textarea.style.width = prev.width
+    textarea.style.height = prev.height
+    textarea.style.opacity = prev.opacity
+    textarea.style.zIndex = prev.zIndex
+  })
+}
 
 interface LogEntry {
   id: number
@@ -262,7 +304,7 @@ export default function InputDiagnostics() {
   }, [])
 
   const handleFocusTerm = useCallback(() => {
-    termRef.current?.focus()
+    focusDiagnosticTerminal(termRef.current)
   }, [])
 
   return (
