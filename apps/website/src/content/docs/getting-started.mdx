@@ -16,9 +16,10 @@ git clone https://github.com/sting8k/jump.git
 cd jump
 TMPDIR=/tmp GOWORK=$PWD/go.work go build -o ~/.local/bin/jump ./cli/jump/cmd/jump
 TMPDIR=/tmp GOWORK=$PWD/go.work go build -o ~/.local/bin/jumpd ./services/jumpd/cmd/jumpd
+TMPDIR=/tmp GOWORK=$PWD/go.work go build -o ~/.local/bin/jump-relayd ./services/jump-relayd/cmd/jump-relayd
 ```
 
-When release automation is restored, binaries will be published through [GitHub Releases](https://github.com/sting8k/jump/releases). On Windows, use WSL.
+Binaries are published through [GitHub Releases](https://github.com/sting8k/jump/releases). Each archive includes `jump`, `jumpd`, and `jump-relayd`. On Windows, use WSL.
 
 ## Run
 

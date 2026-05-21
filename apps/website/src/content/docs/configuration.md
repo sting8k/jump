@@ -7,7 +7,7 @@ jump works out of the box with no configuration. Everything is customizable thro
 
 | File | Purpose | Reference |
 |------|---------|-----------|
-| `host.toml` | Daemon behavior: port, Tailscale remote access | [host.toml →](/reference/host-toml/) |
+| `host.toml` | Daemon behavior: listen address, port, Tailscale/relay remote access | [host.toml →](/reference/host-toml/) |
 | `settings.jsonc` | Terminal options, keybinds, UI preferences | [settings.jsonc →](/reference/settings/) |
 | `theme.jsonc` | Terminal color palette (Windows Terminal theme compatible) | [theme.jsonc →](/reference/theme/) |
 

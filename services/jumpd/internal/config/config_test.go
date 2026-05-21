@@ -27,6 +27,9 @@ func TestLoadDefaults(t *testing.T) {
 	if !cfg.Discovery.Devcontainers {
 		t.Error("discovery.devcontainers should default to true")
 	}
+	if cfg.Listen != "" {
+		t.Errorf("listen = %q, want empty default", cfg.Listen)
+	}
 }
 
 func TestLoadFromFile(t *testing.T) {
@@ -34,6 +37,7 @@ func TestLoadFromFile(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", dir)
 	writeConfig(t, dir, `
 port = 9999
+listen = "0.0.0.0"
 
 [tailscale]
 enabled = true
@@ -47,6 +51,9 @@ allow = ["alice@github", "bob@github"]
 	}
 	if cfg.Port != 9999 {
 		t.Errorf("port = %d, want 9999", cfg.Port)
+	}
+	if cfg.Listen != "0.0.0.0" {
+		t.Errorf("listen = %q, want 0.0.0.0", cfg.Listen)
 	}
 	if !cfg.Tailscale.Enabled {
 		t.Error("tailscale should be enabled")
@@ -299,6 +306,20 @@ func TestLoadRejectsInvalidPort(t *testing.T) {
 	}
 }
 
+func TestLoadRejectsInvalidListen(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", dir)
+	writeConfig(t, dir, `listen = "8.8.8.8"`)
+
+	_, err := Load()
+	if err == nil {
+		t.Fatal("expected error for public listen address")
+	}
+	if !strings.Contains(err.Error(), "listen") || !strings.Contains(err.Error(), "public IP") {
+		t.Errorf("error = %q, want mention of listen public IP", err)
+	}
+}
+
 func TestLoadRejectsBadLoginFormat(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", dir)
@@ -394,9 +415,37 @@ func TestListenAddrCustomPort(t *testing.T) {
 	}
 }
 
+func TestListenAddrConfigListen(t *testing.T) {
+	t.Setenv("JUMPD_LISTEN", "")
+	cfg := defaults()
+	cfg.Listen = "0.0.0.0"
+
+	addr, err := cfg.ListenAddr()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if addr != "0.0.0.0:8790" {
+		t.Errorf("addr = %q, want %q", addr, "0.0.0.0:8790")
+	}
+}
+
 func TestListenAddrEnvOverride(t *testing.T) {
 	t.Setenv("JUMPD_LISTEN", "10.0.0.99")
 	addr, err := defaults().ListenAddr()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if addr != "10.0.0.99:8790" {
+		t.Errorf("addr = %q, want %q", addr, "10.0.0.99:8790")
+	}
+}
+
+func TestListenAddrEnvOverridesConfig(t *testing.T) {
+	t.Setenv("JUMPD_LISTEN", "10.0.0.99")
+	cfg := defaults()
+	cfg.Listen = "0.0.0.0"
+
+	addr, err := cfg.ListenAddr()
 	if err != nil {
 		t.Fatal(err)
 	}

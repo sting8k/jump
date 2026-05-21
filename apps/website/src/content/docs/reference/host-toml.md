@@ -12,8 +12,9 @@ Daemon behavior. jumpd reads this file once at startup. Create or edit it manual
 ## Example
 
 ```toml
-# TCP port for the HTTP listener.
-# Default: 8790
+# TCP listener. Defaults to localhost:8790.
+# Set listen = "0.0.0.0" to accept LAN/VPN/container traffic.
+listen = "127.0.0.1"
 port = 8790
 
 # Optional Tailscale remote access.
@@ -48,6 +49,7 @@ token_file = "~/.config/jump/tokens/server"
 
 | Field | Type | Default | Range | Description |
 |-------|------|---------|-------|-------------|
+| `listen` | `string` | `"127.0.0.1"` | loopback, private, link-local, CGNAT, ULA, or unspecified IP | TCP bind address. Use `"0.0.0.0"` for all IPv4 interfaces. |
 | `port` | `number` | `8790` | 1–65535 | TCP port for the HTTP listener. |
 
 ### `[tailscale]`
@@ -96,6 +98,7 @@ The config file is strictly validated at startup. jumpd refuses to start if:
 - **`allow` entries don't contain `@`**, likely not a valid Tailscale login name
 - **`hostname` is empty** when Tailscale is enabled
 - **`relay.url` or `relay.token` are empty** when relay is enabled, or `relay.url` is not `ws://` / `wss://`
+- **`listen` is not a valid safe bind IP** (public IPs are rejected; use loopback, private/VPN, or `0.0.0.0` / `::`)
 - **`port` is out of range** (must be 1–65535)
 - **A `[[peers]]` entry is missing required fields** (`name`, `url`) or specifies more than one token source
 - **Two `[[peers]]` entries share the same `name`**

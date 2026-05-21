@@ -132,7 +132,7 @@ jumpd: running (pid 12345)
   Logs: /home/user/.local/state/jump/jumpd.log
 ```
 
-Reads [`host.toml`](/reference/host-toml/) for configuration. Binds to `127.0.0.1` on the configured port (default 8790) and creates a Unix socket for local IPC.
+Reads [`host.toml`](/reference/host-toml/) for configuration. Binds to `listen` + `port` (default `127.0.0.1:8790`) and creates a Unix socket for local IPC. Use `listen = "0.0.0.0"` or `JUMPD_LISTEN=0.0.0.0` for LAN/VPN/container access.
 
 ### `jumpd run`
 

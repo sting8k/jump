@@ -432,6 +432,12 @@ func TestUsageIncludesNewCommands(t *testing.T) {
 			t.Errorf("usage missing command %q", cmd)
 		}
 	}
+	for _, hint := range []string{"listen = \"0.0.0.0\"", "JUMPD_LISTEN"} {
+		if !strings.Contains(out, hint) {
+			t.Errorf("usage missing listen hint %q", hint)
+		}
+	}
+
 	// Old commands should not appear as command entries.
 	for _, old := range []string{"remote", "shutdown", "auth-link", "--replace"} {
 		if strings.Contains(out, "\n  "+old+" ") {

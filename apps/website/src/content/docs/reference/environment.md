@@ -11,7 +11,7 @@ Variables that affect the daemon.
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
-| `JUMPD_LISTEN` | TCP bind address (IPv4 or IPv6). | `127.0.0.1` |
+| `JUMPD_LISTEN` | Override the TCP bind address from `host.toml` (IPv4 or IPv6). | *(unset)* |
 | `JUMPD_TOKEN` | Seed the auth token file on first start. | *(none)* |
 | `XDG_CONFIG_HOME` | Base directory for config files. | `~/.config` |
 | `XDG_STATE_HOME` | Base directory for runtime state (socket, auth token). | `~/.local/state` |
@@ -21,13 +21,17 @@ Variables that affect the daemon.
 
 By default jumpd binds to `127.0.0.1` (localhost only). All TCP connections require bearer token authentication.
 
-To bind to all interfaces (containers, VPN setups):
+For persistent host config, set [`listen`](/reference/host-toml/#top-level):
+
+```toml
+listen = "0.0.0.0"
+```
+
+For systemd, Docker, or one-off runs, `JUMPD_LISTEN` overrides `host.toml`:
 
 ```bash
 JUMPD_LISTEN=0.0.0.0 jumpd run
 ```
-
-The bind address is controlled exclusively by the `JUMPD_LISTEN` environment variable. It is not a config file option because it is a deployment concern, not a user preference.
 
 ### Auth token
 

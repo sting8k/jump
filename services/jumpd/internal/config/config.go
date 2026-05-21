@@ -27,6 +27,9 @@ type Config struct {
 	// Port is the TCP port for the HTTP listener (default 8790).
 	Port int `toml:"port"`
 
+	// Listen is the TCP bind address for the HTTP listener (default 127.0.0.1).
+	Listen string `toml:"listen"`
+
 	Remote    RemoteConfig    `toml:"remote"`
 	Tailscale TailscaleConfig `toml:"tailscale"`
 	Discovery DiscoveryConfig `toml:"discovery"`
@@ -161,6 +164,7 @@ func Load() (Config, error) {
 	cfg.Tailscale.Allow = filtered
 	cfg.Remote.PublicURL = strings.TrimSpace(cfg.Remote.PublicURL)
 	cfg.Tailscale.AuthKey = strings.TrimSpace(cfg.Tailscale.AuthKey)
+	cfg.Listen = strings.TrimSpace(cfg.Listen)
 
 	if err := applyRemoteMode(&cfg, md); err != nil {
 		return Config{}, fmt.Errorf("config: %s: %w", path, err)
@@ -211,6 +215,13 @@ func validate(cfg Config) error {
 	// Port range.
 	if cfg.Port < 1 || cfg.Port > 65535 {
 		return fmt.Errorf("port %d is out of range (1-65535)", cfg.Port)
+	}
+
+	// Listen is security-sensitive because widening it exposes the TCP UI.
+	if cfg.Listen != "" {
+		if err := validateListen(cfg.Listen); err != nil {
+			return fmt.Errorf("listen: %w", err)
+		}
 	}
 
 	// Tailscale: allow list entries must look like login names.
@@ -438,15 +449,18 @@ func expandHome(path string) string {
 }
 
 // ListenAddr returns the effective TCP listen address (host:port).
-// The bind address is controlled by the JUMPD_LISTEN env var
-// (default "127.0.0.1"). The port comes from the config file.
+// The bind address defaults to "127.0.0.1". It can be set in host.toml with
+// listen = "..." and overridden at process start with JUMPD_LISTEN.
 func (cfg Config) ListenAddr() (string, error) {
 	listen := "127.0.0.1"
+	if cfg.Listen != "" {
+		listen = cfg.Listen
+	}
 	if env := os.Getenv("JUMPD_LISTEN"); env != "" {
-		listen = env
-		if err := validateListen(listen); err != nil {
-			return "", err
-		}
+		listen = strings.TrimSpace(env)
+	}
+	if err := validateListen(listen); err != nil {
+		return "", err
 	}
 
 	return net.JoinHostPort(listen, fmt.Sprintf("%d", cfg.Port)), nil

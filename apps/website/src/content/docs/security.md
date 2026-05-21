@@ -32,7 +32,7 @@ By default, the TCP listener binds to `127.0.0.1`:
 - ❌ Not reachable from Tailscale or other VPNs
 - ❌ Not reachable from the internet
 
-The bind address can be changed via `JUMPD_LISTEN` for container and VPN deployments (see [Running in Docker](/running-in-docker/)). The port can be changed in the [config file](/reference/host-toml/).
+The bind address can be changed with `listen` in [`host.toml`](/reference/host-toml/) or overridden with `JUMPD_LISTEN` for container and systemd deployments (see [Running in Docker](/running-in-docker/)). The port can also be changed in `host.toml`.
 
 ### Bearer token
 

@@ -52,11 +52,25 @@ builds:
     ldflags:
       - -s -w -X main.version={{ .Version }}
 
+  - id: jump-relayd
+    main: ./cmd/jump-relayd
+    dir: services/jump-relayd
+    binary: jump-relayd
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
 archives:
   - id: default
     ids:
       - jumpd
       - jump
+      - jump-relayd
     name_template: "jump_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     formats:
       - tar.gz

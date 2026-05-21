@@ -102,7 +102,7 @@ jobs:
           set -eu
           body="<!-- jump-pr-build -->
           ### Try this PR
-          Download the jump-pr${PR} artifact from this workflow run and copy jump + jumpd into your PATH.
+          Download the jump-pr${PR} artifact from this workflow run and copy jump, jumpd, and jump-relayd into your PATH.
 
           Built from ${HEAD_SHORT}: https://github.com/${{ github.repository }}/pull/${PR}/commits/${HEAD_SHORT} — ${HEAD_SUBJECT}
           <sub>Artifacts expire after 7 days. Public install scripts are disabled for this fork.</sub>"

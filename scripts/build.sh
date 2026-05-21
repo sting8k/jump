@@ -37,5 +37,6 @@ printf '[build] Go binaries\n'
 mkdir -p bin
 go build -ldflags "-X main.version=$VERSION" -o bin/jump ./cli/jump/cmd/jump
 go build -ldflags "-X main.version=$VERSION" -o bin/jumpd ./services/jumpd/cmd/jumpd
+go build -o bin/jump-relayd ./services/jump-relayd/cmd/jump-relayd
 
-printf '[build] wrote bin/jump and bin/jumpd (VERSION=%s)\n' "$VERSION"
+printf '[build] wrote bin/jump, bin/jumpd, and bin/jump-relayd (VERSION=%s)\n' "$VERSION"

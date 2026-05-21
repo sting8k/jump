@@ -83,7 +83,7 @@ The container runs `jumpd` as its entrypoint. Inside the container, `JUMPD_LISTE
 
 ### Bind address
 
-`JUMPD_LISTEN` controls which address jumpd binds to inside the container. It's an environment variable, not a config file option, because it's a deployment concern. The default (`127.0.0.1`) only accepts local connections, which is correct for bare-metal installs but unreachable from outside a container. See [Environment variables](/reference/environment/#bind-address) for details.
+`JUMPD_LISTEN` controls which address jumpd binds to inside the container and overrides any `listen` value in `host.toml`. The default (`127.0.0.1`) only accepts local connections, which is correct for bare-metal installs but unreachable from outside a container. See [Environment variables](/reference/environment/#bind-address) for details.
 
 ### What's blocked over TCP
 

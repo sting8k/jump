@@ -223,6 +223,8 @@ Commands:
 
 Tip:
   jump <command>     Run a command; jump auto-starts jumpd if needed
+  listen = "0.0.0.0" in host.toml exposes the TCP UI beyond localhost
+  JUMPD_LISTEN=... overrides host.toml for systemd/Docker deployments
   More help: https://github.com/sting8k/jump
 `, version)
 }

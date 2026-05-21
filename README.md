@@ -88,7 +88,7 @@ Relay server:
 jump-relayd -listen 127.0.0.1:8791 -token-file /etc/jump-relayd/token
 ```
 
-Put HTTPS in front of the relay with nginx, Caddy, Cloudflare, or similar. See `docs/product/remote-access.md` for relay and tsnet details.
+Put HTTPS in front of the relay with nginx, Caddy, Cloudflare, or similar. Official release archives include `jump`, `jumpd`, and `jump-relayd`. See `docs/product/remote-access.md` for relay and tsnet details.
 
 ### Tailscale/tsnet mode
 

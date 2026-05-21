@@ -8,8 +8,11 @@ Accepted design contract for future jump remote-access work.
 
 jump has one implicit local runtime baseline and two optional remote-access
 modes: `tsnet` and `relay`. A missing `[remote]` block means local-only.
-Provisioning helpers, SSH tunnels, reverse-proxy snippets, and install scripts
-may automate setup, but they are not additional access modes.
+The local TCP listener defaults to `127.0.0.1`, but operators may bind it to
+private/VPN/container interfaces with `listen` in `host.toml` or the
+`JUMPD_LISTEN` environment override; this does not create a third remote-access
+mode. Provisioning helpers, SSH tunnels, reverse-proxy snippets, and install
+scripts may automate setup, but they are not additional access modes.
 
 ```text
 jump sessions
@@ -24,7 +27,7 @@ jump sessions
 | Term | Meaning |
 | --- | --- |
 | Runtime core | `jump`, `jumpd`, local PTY sessions, local state, and the shared web/API handler. |
-| Local baseline | The implicit browser path to the same-machine `jumpd` handler. It is not configured as a remote mode. |
+| Local baseline | The implicit browser path to the same-machine `jumpd` handler. It is not configured as a remote mode, even when the TCP bind address is widened for private/VPN/container access. |
 | Remote-access mode | An optional non-local transport selected by `[remote].mode`: `tsnet` or `relay`. |
 | Provisioning | Optional automation that installs binaries, creates services, configures DNS/TLS, or writes config. |
 
@@ -105,5 +108,8 @@ actionable error.
 - tsnet mode delegates network reachability to Tailscale identity and ACLs.
 - relay mode requires TLS at the public edge and a shared secret or stronger
   agent authentication between `jumpd` and `jump-relayd`.
+- The local TCP listener is bearer-token authenticated even when `listen` /
+  `JUMPD_LISTEN` exposes it beyond localhost; public internet exposure still
+  requires a TLS/proxy/VPN story outside this baseline.
 - Browser authentication/authorization remains a `jumpd` responsibility unless a
   future decision explicitly moves part of it to the relay edge.

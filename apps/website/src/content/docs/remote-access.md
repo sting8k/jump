@@ -124,6 +124,8 @@ If the other account is on a **different tailnet**, you also need to share the j
 
 Run a relay server on a VPS:
 
+`jump-relayd` ships in the official release archives alongside `jump` and `jumpd`.
+
 ```bash
 jump-relayd -listen :8791 -token '<strong-random-token>'
 ```

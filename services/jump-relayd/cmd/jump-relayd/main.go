@@ -259,6 +259,7 @@ func (a *agentConn) proxyWebSocket(w http.ResponseWriter, req *http.Request) {
 	a.mu.Unlock()
 
 	ctx, cancel := context.WithTimeout(req.Context(), 15*time.Second)
+	defer cancel()
 	if err := a.send(ctx, relayproto.Frame{Type: relayproto.TypeWSOpen, ID: id, Method: req.Method, Path: req.URL.RequestURI(), Header: cloneHeader(req.Header)}); err != nil {
 		cancel()
 		a.removeWS(id)
