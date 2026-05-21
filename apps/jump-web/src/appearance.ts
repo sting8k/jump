@@ -18,11 +18,13 @@ export const DEFAULT_THEME_ID = 'default'
 export const SPACETIME_THEME_ID = 'spacetime'
 export const VERCEL_THEME_ID = 'vercel'
 export const ATELIER_THEME_ID = 'atelier'
+export const HUD_THEME_ID = 'hud'
 export const THEME_CATALOG: readonly ThemeDefinition[] = [
   { id: DEFAULT_THEME_ID, label: 'Default', themeColor: '#0a0e13' },
   { id: SPACETIME_THEME_ID, label: 'Spacetime', themeColor: '#202126' },
   { id: VERCEL_THEME_ID, label: 'Command Center', themeColor: '#000000' },
   { id: ATELIER_THEME_ID, label: 'Silver Atelier', themeColor: '#0b0a09' },
+  { id: HUD_THEME_ID, label: 'Signal HUD', themeColor: '#172634' },
 ]
 export const DEFAULT_APPEARANCE: AppearancePreferences = { themeId: DEFAULT_THEME_ID }
 

@@ -1,0 +1,432 @@
+/* jump Web UI — Silver Atelier theme. */
+
+:root[data-theme="atelier"] {
+  /* Silver Atelier: warm graphite studio surfaces with muted precious-metal state. */
+  --bg: #090807;
+  --bg-sidebar: #0e0d0b;
+  --bg-surface: #151310;
+  --bg-hover: #211d18;
+  --bg-selected: #28221c;
+  --terminal-bg: #090807;
+  --bg-void: #060504;
+
+  --text: #f7f4ed;
+  --text-secondary: #beb6a8;
+  --text-muted: #81786b;
+  --text-faint: #413a33;
+  --text-heading: #fff7e8;
+  --text-bracket: #6b5a47;
+
+  --border: #2a241d;
+  --border-strong: #4a3e31;
+
+  --accent: #d8ad72;
+  --accent-warn: #c7b69c;
+  --accent-blue: #e4c08e;
+
+  --unread: #d8ad72;
+  --active: #f7f4ed;
+
+  --status-error: #ff5f57;
+  --status-connected: #d8ad72;
+  --status-disconnected: #81786b;
+
+  --font-tech: 'Source Sans 3', 'Roboto Mono', ui-sans-serif, system-ui, sans-serif;
+  --radius: 12px;
+  --radius-sm: 9px;
+  --radius-lg: 18px;
+  --edge-hi: oklch(100% 0.015 78 / 0.07);
+  --edge-shadow: color-mix(in oklch, black 58%, var(--bg));
+}
+
+:root[data-theme="atelier"] .app-layout {
+  background:
+    radial-gradient(ellipse 72% 38% at 50% -14%, color-mix(in oklch, var(--accent) 8%, transparent), transparent 58%),
+    radial-gradient(circle at 86% 9%, color-mix(in oklch, var(--text) 3.4%, transparent), transparent 32%),
+    radial-gradient(circle at 10% 102%, color-mix(in oklch, var(--accent) 3%, transparent), transparent 34%),
+    linear-gradient(180deg, #090807, #070605 72%);
+}
+
+:root[data-theme="atelier"] .main-panel {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--accent) 3%, transparent), transparent 220px),
+    var(--bg);
+}
+
+:root[data-theme="atelier"] .sidebar,
+:root[data-theme="atelier"] .main-header,
+:root[data-theme="atelier"] .sidebar-header,
+:root[data-theme="atelier"] .sidebar-footer {
+  background: color-mix(in oklch, var(--bg-sidebar) 92%, black);
+}
+
+@media (pointer: fine) {
+  :root[data-theme="atelier"] .sidebar {
+    position: relative;
+  }
+}
+
+:root[data-theme="atelier"] .sidebar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0 1px,
+    color-mix(in oklch, white 0.5%, transparent) 1px 2px
+  );
+  opacity: 0.3;
+}
+
+:root[data-theme="atelier"] .sidebar-logo {
+  background: #090807;
+  border-color: color-mix(in oklch, var(--accent) 28%, var(--border));
+  box-shadow:
+    inset 0 1px 0 var(--edge-hi),
+    0 8px 22px color-mix(in oklch, black 34%, transparent);
+}
+
+:root[data-theme="atelier"] .home {
+  padding: 30px;
+  background:
+    radial-gradient(ellipse 64% 34% at 50% -8%, color-mix(in oklch, var(--accent) 5.5%, transparent), transparent 58%),
+    radial-gradient(circle at 82% 8%, color-mix(in oklch, white 2.4%, transparent), transparent 30%),
+    linear-gradient(180deg, color-mix(in oklch, var(--bg-surface) 22%, transparent), transparent 260px);
+}
+
+:root[data-theme="atelier"] .home::before {
+  content: 'SILVER ATELIER';
+  color: var(--text-muted);
+  font-family: var(--font-tech);
+  font-weight: 600;
+  letter-spacing: 0.18em;
+}
+
+:root[data-theme="atelier"] .home-host-grid,
+:root[data-theme="atelier"] .home-project-grid {
+  gap: 14px;
+}
+
+:root[data-theme="atelier"] .home-host-card,
+:root[data-theme="atelier"] .home-project-card,
+:root[data-theme="atelier"] .home-workspace-add,
+:root[data-theme="atelier"] .sidebar-metrics,
+:root[data-theme="atelier"] .mp-section,
+:root[data-theme="atelier"] .modal-panel,
+:root[data-theme="atelier"] .launch-inline-menu,
+:root[data-theme="atelier"] .session-menu-dropdown {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, white 3.2%, transparent), transparent 72px),
+    color-mix(in oklch, var(--bg-surface) 96%, white);
+  border-color: color-mix(in oklch, white 10%, var(--border));
+  box-shadow:
+    0 1px 3px color-mix(in oklch, black 8%, transparent),
+    inset 0 1px 0 color-mix(in oklch, white 6%, transparent);
+  transition:
+    background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme="atelier"] .modal-panel,
+:root[data-theme="atelier"] .launch-inline-menu,
+:root[data-theme="atelier"] .session-menu-dropdown {
+  box-shadow:
+    inset 0 1px 0 var(--edge-hi),
+    0 26px 80px rgb(0 0 0 / 0.44);
+}
+
+:root[data-theme="atelier"] .home-host-card,
+:root[data-theme="atelier"] .home-project-card,
+:root[data-theme="atelier"] .home-workspace-add {
+  padding: 18px;
+}
+
+:root[data-theme="atelier"] .mp-section {
+  padding: 14px;
+}
+
+:root[data-theme="atelier"] .home-project-card {
+  padding-right: 38px;
+}
+
+:root[data-theme="atelier"] .home-host-card:hover,
+:root[data-theme="atelier"] .home-project-card:hover,
+:root[data-theme="atelier"] .home-workspace-suggestion:hover,
+:root[data-theme="atelier"] .mp-project-row:hover,
+:root[data-theme="atelier"] .mp-discovered-row:hover,
+:root[data-theme="atelier"] .session-item:hover {
+  background:
+    radial-gradient(ellipse 120% 100% at 0% 50%, color-mix(in oklch, var(--accent) 5.5%, transparent), transparent 70%),
+    color-mix(in oklch, var(--bg-hover) 80%, var(--bg-surface));
+  border-color: color-mix(in oklch, var(--accent) 24%, var(--border-strong));
+}
+
+:root[data-theme="atelier"] .home-host-card:hover,
+:root[data-theme="atelier"] .home-project-card:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, white 18%, var(--border));
+  box-shadow:
+    0 4px 12px color-mix(in oklch, black 12%, transparent),
+    inset 0 1px 0 color-mix(in oklch, white 8%, transparent);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+:root[data-theme="atelier"] .session-item {
+  gap: 10px;
+  padding: 8px 8px 8px 18px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+:root[data-theme="atelier"] .session-item.selected {
+  animation: atelier-selected-fade-in 0.3s ease-out;
+  background:
+    radial-gradient(ellipse 120% 100% at 0% 50%, color-mix(in oklch, var(--accent) 8%, transparent), transparent 70%),
+    color-mix(in oklch, var(--bg-selected) 92%, white);
+  border-color: color-mix(in oklch, var(--accent) 30%, var(--border-strong));
+  box-shadow:
+    inset 2px 0 0 var(--accent),
+    inset 0 1px 0 color-mix(in oklch, white 5%, transparent),
+    0 2px 8px color-mix(in oklch, var(--accent) 6%, transparent);
+}
+
+:root[data-theme="atelier"] .session-item.selected::before {
+  top: 5px;
+  bottom: 5px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--accent), color-mix(in oklch, var(--accent) 70%, transparent));
+  border-radius: 999px;
+  box-shadow: 0 0 8px color-mix(in oklch, var(--accent) 30%, transparent);
+}
+
+:root[data-theme="atelier"] .session-item.selected::after {
+  content: none;
+}
+
+:root[data-theme="atelier"] .session-dot-indicator.working,
+:root[data-theme="atelier"] .session-dot.working,
+:root[data-theme="atelier"] .session-dot-indicator.active,
+:root[data-theme="atelier"] .session-dot-indicator.fading {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 6px color-mix(in oklch, var(--accent) 25%, transparent),
+    inset 0 0 3px color-mix(in oklch, var(--accent) 40%, transparent);
+  animation: atelier-soft-pulse 2.5s ease-in-out infinite;
+}
+
+:root[data-theme="atelier"] .session-dot-indicator.unread,
+:root[data-theme="atelier"] .session-dot.unread,
+:root[data-theme="atelier"] .home-host-status.connected,
+:root[data-theme="atelier"] .home-host-status.local {
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 0 8px color-mix(in oklch, var(--accent) 24%, transparent);
+}
+
+:root[data-theme="atelier"] .main-header-left .main-header-title::before,
+:root[data-theme="atelier"] .launch-target-line,
+:root[data-theme="atelier"] .session-menu-section-title,
+:root[data-theme="atelier"] .mp-section-label,
+:root[data-theme="atelier"] .modal-label,
+:root[data-theme="atelier"] .home-section-title {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="atelier"] .home-section-title,
+:root[data-theme="atelier"] .mp-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+:root[data-theme="atelier"] .launch-target-line::before,
+:root[data-theme="atelier"] .launch-target-line::after,
+:root[data-theme="atelier"] .session-menu-section-title::before,
+:root[data-theme="atelier"] .session-menu-section-title::after,
+:root[data-theme="atelier"] .mp-section-label::before,
+:root[data-theme="atelier"] .mp-section-label::after,
+:root[data-theme="atelier"] .modal-label::before,
+:root[data-theme="atelier"] .modal-label::after,
+:root[data-theme="atelier"] .home-section-title::before,
+:root[data-theme="atelier"] .home-section-title::after {
+  color: var(--text-bracket);
+}
+
+:root[data-theme="atelier"] .sidebar-metrics.tui::before {
+  content: 'HOST TELEMETRY';
+  color: var(--text-secondary);
+  text-shadow: none;
+}
+
+:root[data-theme="atelier"] .sidebar-metrics::after {
+  content: '';
+  border: 0;
+  background:
+    linear-gradient(color-mix(in oklch, var(--accent) 38%, transparent) 0 0) left top / 22px 1px no-repeat,
+    linear-gradient(color-mix(in oklch, var(--accent) 30%, transparent) 0 0) left top / 1px 22px no-repeat,
+    linear-gradient(color-mix(in oklch, var(--text) 16%, transparent) 0 0) right bottom / 26px 1px no-repeat,
+    linear-gradient(color-mix(in oklch, var(--text) 12%, transparent) 0 0) right bottom / 1px 26px no-repeat;
+  opacity: 0.82;
+}
+
+:root[data-theme="atelier"] .sidebar-metrics-row strong {
+  color: var(--text-heading);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+:root[data-theme="atelier"] .sidebar-metrics-bar {
+  background: color-mix(in oklch, var(--bg) 82%, black);
+  border-color: color-mix(in oklch, var(--accent) 16%, var(--border-strong));
+}
+
+:root[data-theme="atelier"] .sidebar-metrics-bar i,
+:root[data-theme="atelier"] .sidebar-metrics-bar.battery i {
+  background: linear-gradient(90deg, color-mix(in oklch, var(--accent) 54%, var(--text-muted)), var(--accent));
+  box-shadow: inset 0 1px 0 color-mix(in oklch, white 18%, transparent);
+}
+
+:root[data-theme="atelier"] .session-peer-label,
+:root[data-theme="atelier"] .manage-projects-badge,
+:root[data-theme="atelier"] .session-menu-action-tag {
+  border-color: color-mix(in oklch, var(--accent) 18%, var(--border));
+  color: var(--text-secondary);
+}
+
+:root[data-theme="atelier"] .theme-menu-option {
+  border-radius: 999px;
+}
+
+:root[data-theme="atelier"] .main-header-pty-count {
+  border-color: color-mix(in oklch, var(--accent) 16%, var(--border-strong));
+  background: color-mix(in oklch, var(--bg-surface) 62%, var(--bg));
+}
+
+:root[data-theme="atelier"] .main-header-pty-live {
+  color: var(--text-heading);
+}
+
+:root[data-theme="atelier"] .main-header-pty-dead strong {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="atelier"] .home-card-icon,
+:root[data-theme="atelier"] .folder-icon,
+:root[data-theme="atelier"] .mp-row-icon {
+  color: var(--accent);
+}
+
+:root[data-theme="atelier"] .folder-name.current {
+  color: var(--text-heading);
+}
+
+:root[data-theme="atelier"] .btn-icon:hover,
+:root[data-theme="atelier"] .session-close-btn:hover,
+:root[data-theme="atelier"] .home-project-remove:hover,
+:root[data-theme="atelier"] .mp-remove-btn:hover {
+  background: color-mix(in oklch, var(--accent) 10%, var(--bg-hover));
+  border-color: color-mix(in oklch, var(--accent) 24%, var(--border-strong));
+  color: var(--accent);
+}
+
+:root[data-theme="atelier"] .home-host-card::before,
+:root[data-theme="atelier"] .home-project-card::before,
+:root[data-theme="atelier"] .home-workspace-add::before,
+:root[data-theme="atelier"] .mp-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  opacity: 0.72;
+}
+
+:root[data-theme="atelier"] .home-host-card::after,
+:root[data-theme="atelier"] .home-project-card::after,
+:root[data-theme="atelier"] .home-workspace-add::after,
+:root[data-theme="atelier"] .mp-section::after,
+:root[data-theme="atelier"] .sidebar-metrics::after {
+  border-top-color: color-mix(in oklch, var(--text) 9%, transparent);
+  border-left-color: color-mix(in oklch, var(--accent) 7%, transparent);
+}
+
+:root[data-theme="atelier"] .home-host-card,
+:root[data-theme="atelier"] .home-project-card,
+:root[data-theme="atelier"] .home-workspace-add,
+:root[data-theme="atelier"] .mp-section,
+:root[data-theme="atelier"] .sidebar-metrics {
+  border-radius: var(--radius);
+}
+
+:root[data-theme="atelier"] .modal-panel,
+:root[data-theme="atelier"] .launch-inline-menu,
+:root[data-theme="atelier"] .session-menu-dropdown {
+  border-radius: var(--radius-lg);
+}
+
+:root[data-theme="atelier"] .session-title {
+  font-size: 11.5px;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
+}
+
+:root[data-theme="atelier"] .session-meta {
+  color: var(--text-muted);
+}
+
+:root[data-theme="atelier"] .theme-menu-active-dot {
+  background: var(--accent);
+}
+
+:root[data-theme="atelier"] .jump-to-bottom:hover {
+  background: color-mix(in oklch, var(--accent) 14%, var(--bg-hover));
+  border-color: color-mix(in oklch, var(--accent) 48%, var(--border));
+  color: var(--accent);
+}
+
+:root[data-theme="atelier"] .terminal-resize-overlay:hover {
+  background: color-mix(in oklch, var(--accent) 10%, var(--bg-hover));
+  border-color: color-mix(in oklch, var(--accent) 42%, var(--border));
+  color: var(--accent);
+}
+
+:root[data-theme="atelier"] .mobile-bottom-action.send-btn,
+:root[data-theme="atelier"] .mobile-bottom-action.keyboard-btn {
+  color: var(--accent);
+}
+
+:root[data-theme="atelier"] .mobile-bottom-action:active,
+:root[data-theme="atelier"] .mobile-bottom-action.armed,
+:root[data-theme="atelier"] .mobile-bottom-action.keyboard-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.theme-menu-swatch.atelier {
+  background:
+    radial-gradient(circle at 30% 20%, #f7f4ed 0 12%, transparent 13%),
+    linear-gradient(135deg, #090807 0 48%, #d8ad72 48% 64%, #4a3e31 64%);
+}
+
+@keyframes atelier-selected-fade-in {
+  from {
+    opacity: 0.7;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes atelier-soft-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(0.95); }
+}

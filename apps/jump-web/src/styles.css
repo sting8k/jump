@@ -1,6 +1,11 @@
 /* jump — session orchestration UI */
 
 @import './fonts.css';
+@import './themes/default.css';
+@import './themes/spacetime.css';
+@import './themes/vercel.css';
+@import './themes/atelier.css';
+@import './themes/hud.css';
 
 code {
   font-family: var(--font-mono);
@@ -9,171 +14,6 @@ code {
   border: 1px solid var(--border);
   padding: 0.15em 0.4em;
   border-radius: var(--radius-sm);
-}
-
-:root,
-:root[data-theme="default"] {
-  /* Terminal pasture: dark mono surfaces, thin borders, living state dots. */
-  --bg: #11111b;
-  --bg-sidebar: #181825;
-  --bg-surface: #1e1e2e;
-  --bg-hover: #262637;
-  --bg-selected: #242438;
-  --terminal-bg: #11111b;
-  --bg-void: #11111b;
-
-  /* Text */
-  --text: #cdd6f4;
-  --text-secondary: #a6adc8;
-  --text-muted: #6c7086;
-  --text-faint: #45475a;
-  --text-heading: #a6adc8;
-  --text-bracket: #585b70;
-
-  /* Borders */
-  --border: #313244;
-  --border-strong: #45475a;
-
-  /* Pasture accents */
-  --accent: #a6e3a1;
-  --accent-warn: #f9e2af;
-  --accent-blue: #89b4fa;
-
-  /* Unread — done/attention blue, distinct from active work. */
-  --unread: var(--accent-blue);
-
-  /* Active — working yellow. */
-  --active: var(--accent-warn);
-
-  /* Status */
-  --status-error: #f38ba8;
-  --status-connected: var(--accent);
-  --status-disconnected: var(--accent-warn);
-
-  /* Type + radii */
-  --font-mono: 'Roboto Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --font-tech: 'Fira Code', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --radius: 4px;
-  --radius-sm: 3px;
-  --radius-lg: 6px;
-  --radius-dot: 999px;
-
-  /* Sizing */
-  --sidebar-width: 252px;
-  --header-height: 36px;
-}
-
-:root[data-theme="spacetime"] {
-  /* SpacetimeDB-inspired: blue-black surfaces, cold borders, softer neon accents. */
-  --bg: #0d1218;
-  --bg-sidebar: #0f171f;
-  --bg-surface: #121b24;
-  --bg-hover: #182531;
-  --bg-selected: #18323f;
-  --terminal-bg: #11111b;
-  --bg-void: #090d11;
-
-  --text: #dce7ef;
-  --text-secondary: #b8c8d5;
-  --text-muted: #718391;
-  --text-faint: #34414b;
-  --text-heading: #93ddcd;
-  --text-bracket: #45606b;
-
-  --border: #1b2a34;
-  --border-strong: #27404d;
-
-  --accent: #6df0aa;
-  --accent-warn: #ead18a;
-  --accent-blue: #55c7ee;
-
-  --unread: #55c7ee;
-  --active: #ead18a;
-
-  --status-error: #ff7aa8;
-  --status-connected: #6df0aa;
-  --status-disconnected: #ead18a;
-
-  --edge-hi: oklch(100% 0 0 / 0.045);
-  --edge-shadow: color-mix(in oklch, black 50%, var(--bg));
-}
-
-:root[data-theme="vercel"] {
-  /* Command Center: black cockpit UI, hard geometry, and one HUD-cyan state channel. */
-  --bg: #000;
-  --bg-sidebar: #030506;
-  --bg-surface: #070a0c;
-  --bg-hover: #0d1417;
-  --bg-selected: #101b20;
-  --terminal-bg: #000;
-  --bg-void: #000;
-
-  --text: #f3f8fa;
-  --text-secondary: #a5b3b8;
-  --text-muted: #637278;
-  --text-faint: #263238;
-  --text-heading: #d9f7ff;
-  --text-bracket: #34515b;
-
-  --border: #11191d;
-  --border-strong: #263940;
-
-  --accent: #7de7ff;
-  --accent-warn: #c5d8de;
-  --accent-blue: #7de7ff;
-
-  --unread: #7de7ff;
-  --active: #f3f8fa;
-
-  --status-error: #ff453a;
-  --status-connected: #7de7ff;
-  --status-disconnected: #637278;
-
-  --font-tech: 'Fira Code', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --radius: 3px;
-  --radius-sm: 2px;
-  --radius-lg: 5px;
-  --edge-hi: oklch(100% 0 0 / 0.065);
-  --edge-shadow: color-mix(in oklch, black 68%, var(--bg));
-}
-
-:root[data-theme="atelier"] {
-  /* Silver Atelier: warm graphite studio surfaces with muted precious-metal state. */
-  --bg: #090807;
-  --bg-sidebar: #0e0d0b;
-  --bg-surface: #151310;
-  --bg-hover: #211d18;
-  --bg-selected: #28221c;
-  --terminal-bg: #090807;
-  --bg-void: #060504;
-
-  --text: #f7f4ed;
-  --text-secondary: #beb6a8;
-  --text-muted: #81786b;
-  --text-faint: #413a33;
-  --text-heading: #fff7e8;
-  --text-bracket: #6b5a47;
-
-  --border: #2a241d;
-  --border-strong: #4a3e31;
-
-  --accent: #d8ad72;
-  --accent-warn: #c7b69c;
-  --accent-blue: #e4c08e;
-
-  --unread: #d8ad72;
-  --active: #f7f4ed;
-
-  --status-error: #ff5f57;
-  --status-connected: #d8ad72;
-  --status-disconnected: #81786b;
-
-  --font-tech: 'Source Sans 3', 'Roboto Mono', ui-sans-serif, system-ui, sans-serif;
-  --radius: 12px;
-  --radius-sm: 9px;
-  --radius-lg: 18px;
-  --edge-hi: oklch(100% 0.015 78 / 0.07);
-  --edge-shadow: color-mix(in oklch, black 58%, var(--bg));
 }
 
 *,
@@ -474,8 +314,6 @@ body {
   white-space: nowrap;
   text-decoration: none;
 }
-
-
 
 .folder-sessions {
   overflow: hidden;
@@ -790,7 +628,6 @@ body {
   font-weight: 600;
   line-height: 1;
 }
-
 
 .sidebar-metrics {
   display: grid;
@@ -1443,8 +1280,6 @@ body {
   color: var(--accent);
 }
 
-
-
 .session-menu-icon {
   font-size: 16px;
   line-height: 1;
@@ -1635,26 +1470,6 @@ body {
   box-shadow: inset 0 1px 0 var(--edge-hi);
 }
 
-.theme-menu-swatch.default {
-  background: linear-gradient(135deg, #11111b 0 50%, #a6e3a1 50% 72%, #89b4fa 72%);
-}
-
-.theme-menu-swatch.spacetime {
-  background: linear-gradient(135deg, #0d1218 0 48%, #6df0aa 48% 70%, #8a80ff 70%);
-}
-
-.theme-menu-swatch.vercel {
-  background:
-    repeating-linear-gradient(90deg, transparent 0 5px, rgb(125 231 255 / 0.18) 5px 6px),
-    linear-gradient(135deg, #000 0 50%, #7de7ff 50% 64%, #263940 64%);
-}
-
-.theme-menu-swatch.atelier {
-  background:
-    radial-gradient(circle at 30% 20%, #f7f4ed 0 12%, transparent 13%),
-    linear-gradient(135deg, #090807 0 48%, #d8ad72 48% 64%, #4a3e31 64%);
-}
-
 .theme-menu-active-dot {
   position: absolute;
   right: 4px;
@@ -1665,7 +1480,6 @@ body {
   background: var(--accent);
   box-shadow: 0 0 7px color-mix(in oklch, var(--accent) 60%, transparent);
 }
-
 
 /* Key/value info rows */
 .session-menu-row {
@@ -1879,7 +1693,6 @@ body {
   background: oklch(from var(--bg-surface) l c h / 0.92);
   color: oklch(76% 0.012 250);
 }
-
 
 /* Use Roboto Mono for italic glyphs since Fira Code has no italic variant.
    The bundled Roboto Mono italic files (from fonts.css) are referenced here
@@ -2164,7 +1977,6 @@ a.home-host-link:hover {
   font-size: 13px;
 }
 
-
 .home-project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -2316,7 +2128,6 @@ a.home-host-link:hover {
   text-decoration: underline;
   text-underline-offset: 2px;
 }
-
 
 /* ── Mobile ── */
 
@@ -2554,7 +2365,6 @@ a.home-host-link:hover {
 }
 
 /* ── Session Detail (non-terminal) ── */
-
 
 .btn {
   font-family: var(--font-mono);
@@ -2971,7 +2781,6 @@ a.home-host-link:hover {
   gap: 8px;
 }
 
-
 /* Floating "jump to bottom" overlay for any xterm-hosting view (replay,
    live terminal). Anchors to the nearest positioned ancestor, which
    .terminal-shell already establishes (position: relative). */
@@ -3009,8 +2818,6 @@ body {
   font-size: 11.5px;
   letter-spacing: -0.008em;
 }
-
-
 
 code,
 input,
@@ -3376,7 +3183,6 @@ code {
   padding: 9px;
   border-top: 1px solid var(--border-strong);
 }
-
 
 .sidebar-metrics {
   background: var(--bg-surface);
@@ -4332,208 +4138,6 @@ select:focus-visible,
   background: color-mix(in oklch, var(--bg-surface) 72%, var(--bg));
 }
 
-:root[data-theme="spacetime"] .app-layout {
-  background:
-    radial-gradient(ellipse at 82% -12%, color-mix(in oklch, var(--accent-blue) 16%, transparent), transparent 42%),
-    radial-gradient(ellipse at 12% 112%, color-mix(in oklch, var(--accent) 12%, transparent), transparent 34%),
-    repeating-linear-gradient(90deg, transparent 0 31px, color-mix(in oklch, var(--accent-blue) 5%, transparent) 31px 32px),
-    repeating-linear-gradient(0deg, transparent 0 31px, color-mix(in oklch, var(--accent) 3%, transparent) 31px 32px),
-    var(--bg);
-}
-
-:root[data-theme="spacetime"] .main-panel {
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 4%, transparent), transparent 180px),
-    var(--bg);
-}
-
-:root[data-theme="spacetime"] .sidebar,
-:root[data-theme="spacetime"] .main-header,
-:root[data-theme="spacetime"] .sidebar-header,
-:root[data-theme="spacetime"] .sidebar-footer {
-  background: color-mix(in oklch, var(--bg-sidebar) 88%, black);
-}
-
-:root[data-theme="spacetime"] .home {
-  background:
-    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 5%, transparent), transparent 180px),
-    linear-gradient(0deg, color-mix(in oklch, var(--accent) 3%, transparent), transparent 260px);
-}
-
-:root[data-theme="spacetime"] .home-host-card,
-:root[data-theme="spacetime"] .home-project-card,
-:root[data-theme="spacetime"] .home-workspace-add,
-:root[data-theme="spacetime"] .mp-section,
-:root[data-theme="spacetime"] .modal-panel,
-:root[data-theme="spacetime"] .session-menu-dropdown {
-  background:
-    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 7%, transparent), transparent 54px),
-    color-mix(in oklch, var(--bg-surface) 94%, black);
-  border-color: color-mix(in oklch, var(--accent-blue) 22%, var(--border));
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    0 12px 28px color-mix(in oklch, black 35%, transparent);
-}
-
-:root[data-theme="spacetime"] .session-item.selected {
-  background:
-    linear-gradient(90deg, color-mix(in oklch, var(--accent) 16%, transparent), transparent 72%),
-    color-mix(in oklch, var(--bg-selected) 82%, var(--bg));
-  border-color: color-mix(in oklch, var(--accent) 36%, var(--border-strong));
-}
-
-:root[data-theme="spacetime"] .theme-menu-option {
-  border-radius: 999px;
-}
-
-:root[data-theme="vercel"] .app-layout {
-  background:
-    radial-gradient(ellipse 76% 34% at 50% -18%, color-mix(in oklch, var(--accent-blue) 7%, transparent), transparent 54%),
-    radial-gradient(circle at 86% 8%, color-mix(in oklch, var(--accent-blue) 3.8%, transparent), transparent 28%),
-    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 1.8%, transparent), transparent 210px),
-    repeating-linear-gradient(90deg, transparent 0 23px, color-mix(in oklch, var(--accent-blue) 3.1%, transparent) 23px 24px),
-    repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in oklch, white 1.25%, transparent) 23px 24px),
-    #000;
-}
-
-:root[data-theme="vercel"] .main-panel {
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 2.2%, transparent), transparent 180px),
-    var(--bg);
-}
-
-:root[data-theme="vercel"] .sidebar,
-:root[data-theme="vercel"] .main-header,
-:root[data-theme="vercel"] .sidebar-header,
-:root[data-theme="vercel"] .sidebar-footer {
-  background: color-mix(in oklch, var(--bg) 92%, var(--accent-blue) 3%);
-}
-
-:root[data-theme="vercel"] .sidebar-logo {
-  background: #000;
-  border-color: color-mix(in oklch, var(--accent-blue) 34%, var(--border));
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 12%, transparent);
-}
-
-:root[data-theme="vercel"] .home {
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 2.8%, transparent), transparent 160px),
-    repeating-linear-gradient(90deg, transparent 0 23px, color-mix(in oklch, var(--accent-blue) 2.2%, transparent) 23px 24px),
-    repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in oklch, white 1%, transparent) 23px 24px);
-}
-
-:root[data-theme="vercel"] .home::before {
-  content: 'COMMAND CENTER';
-  color: var(--accent-blue);
-  font-family: var(--font-tech);
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  text-shadow: 0 0 10px color-mix(in oklch, var(--accent-blue) 30%, transparent);
-}
-
-:root[data-theme="vercel"] .home-host-card,
-:root[data-theme="vercel"] .home-project-card,
-:root[data-theme="vercel"] .home-workspace-add,
-:root[data-theme="vercel"] .sidebar-metrics,
-:root[data-theme="vercel"] .mp-section,
-:root[data-theme="vercel"] .modal-panel,
-:root[data-theme="vercel"] .launch-inline-menu,
-:root[data-theme="vercel"] .session-menu-dropdown {
-  background:
-    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 4.5%, transparent), transparent 58px),
-    color-mix(in oklch, var(--bg-surface) 96%, black);
-  border-color: color-mix(in oklch, var(--accent-blue) 16%, var(--border));
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 4%, transparent);
-}
-
-:root[data-theme="vercel"] .home-host-card:hover,
-:root[data-theme="vercel"] .home-project-card:hover,
-:root[data-theme="vercel"] .home-workspace-suggestion:hover,
-:root[data-theme="vercel"] .mp-project-row:hover,
-:root[data-theme="vercel"] .mp-discovered-row:hover,
-:root[data-theme="vercel"] .session-item:hover {
-  background:
-    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 5%, transparent), transparent 70%),
-    color-mix(in oklch, var(--bg-hover) 76%, var(--bg-surface));
-  border-color: color-mix(in oklch, var(--accent-blue) 30%, var(--border-strong));
-}
-
-:root[data-theme="vercel"] .session-item.selected {
-  background:
-    linear-gradient(180deg, transparent 0%, color-mix(in oklch, var(--accent-blue) 11%, transparent) 50%, transparent 100%) 0 -160% / 100% 220% no-repeat,
-    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 14%, transparent), transparent 72%),
-    color-mix(in oklch, var(--bg-selected) 88%, var(--bg));
-  border-color: color-mix(in oklch, var(--accent-blue) 48%, var(--border-strong));
-  box-shadow:
-    inset 2px 0 0 var(--accent-blue),
-    inset 0 1px 0 var(--edge-hi),
-    0 0 0 1px color-mix(in oklch, var(--accent-blue) 8%, transparent);
-  animation: command-scanline 3.8s ease-in-out infinite;
-}
-
-:root[data-theme="vercel"] .session-item.selected::before {
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
-  background: var(--accent-blue);
-  border-radius: 0;
-  box-shadow: 0 0 10px color-mix(in oklch, var(--accent-blue) 44%, transparent);
-}
-
-:root[data-theme="vercel"] .session-item.selected::after {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  left: 6px;
-  transform: none;
-  pointer-events: none;
-  background:
-    linear-gradient(var(--accent-blue) 0 0) left top / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left top / 1px 9px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right top / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right top / 1px 9px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left bottom / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left bottom / 1px 9px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 9px no-repeat;
-  opacity: 0.7;
-}
-
-:root[data-theme="vercel"] .session-dot-indicator.working,
-:root[data-theme="vercel"] .session-dot.working,
-:root[data-theme="vercel"] .session-dot-indicator.active,
-:root[data-theme="vercel"] .session-dot-indicator.fading {
-  border-color: var(--accent-blue);
-  box-shadow:
-    0 0 7px color-mix(in oklch, var(--accent-blue) 34%, transparent),
-    inset 0 0 3px color-mix(in oklch, var(--accent-blue) 46%, transparent);
-  animation: command-led 2.6s ease-in-out infinite;
-}
-
-:root[data-theme="vercel"] .session-dot-indicator.unread,
-:root[data-theme="vercel"] .session-dot.unread,
-:root[data-theme="vercel"] .home-host-status.connected,
-:root[data-theme="vercel"] .home-host-status.local {
-  background: var(--accent-blue);
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 8px color-mix(in oklch, var(--accent-blue) 36%, transparent);
-}
-
-:root[data-theme="vercel"] .main-header-left .main-header-title::before,
-:root[data-theme="vercel"] .launch-target-line,
-:root[data-theme="vercel"] .session-menu-section-title,
-:root[data-theme="vercel"] .mp-section-label,
-:root[data-theme="vercel"] .modal-label,
-:root[data-theme="vercel"] .home-section-title {
-  color: var(--text-heading);
-}
-
-:root[data-theme="vercel"] .theme-menu-option {
-  border-radius: var(--radius-sm);
-}
-
 .mp-section + .mp-section {
   margin-top: 12px;
   padding-top: 10px;
@@ -4618,524 +4222,6 @@ select:focus-visible,
   position: absolute;
   inset: 0;
   background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0% 0 0 / 0.2) 8px 9px);
-}
-
-/* Command Center pass: tactical instrument surfaces for the `vercel` theme id. */
-:root[data-theme="vercel"] .sidebar-metrics {
-  background:
-    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 14%, transparent), transparent 42px),
-    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 6%, transparent), transparent 56%),
-    repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in oklch, white 1.8%, transparent) 9px 10px),
-    color-mix(in oklch, var(--bg-surface) 94%, black);
-  border-color: color-mix(in oklch, var(--accent-blue) 26%, var(--border-strong));
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 8%, transparent),
-    0 0 0 1px color-mix(in oklch, black 40%, transparent);
-}
-
-:root[data-theme="vercel"] .sidebar-metrics.tui::before {
-  content: '╭─ HOST TELEMETRY ─╮';
-  color: var(--accent-blue);
-  text-shadow: 0 0 10px color-mix(in oklch, var(--accent-blue) 32%, transparent);
-}
-
-:root[data-theme="vercel"] .sidebar-metrics::after {
-  content: '';
-  border: 0;
-  border-radius: 0;
-  background:
-    linear-gradient(var(--accent-blue) 0 0) left top / 24px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left top / 1px 24px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 28px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 28px no-repeat,
-    linear-gradient(var(--accent-warn) 0 0) right 9px top 9px / 18px 1px no-repeat;
-  opacity: 0.72;
-}
-
-:root[data-theme="vercel"] .sidebar-metrics-row strong {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
-  color: var(--text-heading);
-}
-
-:root[data-theme="vercel"] .sidebar-metrics-bar {
-  background:
-    repeating-linear-gradient(90deg, color-mix(in oklch, var(--border-strong) 86%, black) 0 1px, transparent 1px 8px),
-    var(--bg);
-  border-color: color-mix(in oklch, var(--accent-blue) 28%, var(--border-strong));
-  border-radius: 0;
-}
-
-:root[data-theme="vercel"] .sidebar-metrics-bar i,
-:root[data-theme="vercel"] .sidebar-metrics-bar.battery i {
-  background: linear-gradient(90deg, color-mix(in oklch, var(--text) 32%, var(--accent-blue)), var(--accent-blue));
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, white 22%, transparent),
-    0 0 8px color-mix(in oklch, var(--accent-blue) 24%, transparent);
-}
-
-:root[data-theme="vercel"] .launch-target-line::before,
-:root[data-theme="vercel"] .session-menu-section-title::before,
-:root[data-theme="vercel"] .mp-section-label::before,
-:root[data-theme="vercel"] .modal-label::before {
-  color: var(--accent-blue);
-  text-shadow: 0 0 8px color-mix(in oklch, var(--accent-blue) 28%, transparent);
-}
-
-:root[data-theme="vercel"] .launch-target-line::after,
-:root[data-theme="vercel"] .session-menu-section-title::after,
-:root[data-theme="vercel"] .mp-section-label::after,
-:root[data-theme="vercel"] .modal-label::after,
-:root[data-theme="vercel"] .home-section-title::before,
-:root[data-theme="vercel"] .home-section-title::after {
-  color: color-mix(in oklch, var(--accent-blue) 56%, var(--text-bracket));
-}
-
-:root[data-theme="vercel"] .session-title,
-:root[data-theme="vercel"] .folder-name,
-:root[data-theme="vercel"] .sidebar-metrics-row strong {
-  font-variant-numeric: tabular-nums slashed-zero;
-}
-
-:root[data-theme="vercel"] .home {
-  padding: 26px;
-}
-
-:root[data-theme="vercel"] .home-host-grid,
-:root[data-theme="vercel"] .home-project-grid {
-  gap: 10px;
-}
-
-:root[data-theme="vercel"] .home-host-card,
-:root[data-theme="vercel"] .home-project-card,
-:root[data-theme="vercel"] .home-workspace-add,
-:root[data-theme="vercel"] .mp-section,
-:root[data-theme="vercel"] .sidebar-metrics {
-  border-radius: var(--radius);
-}
-
-:root[data-theme="vercel"] .modal-panel,
-:root[data-theme="vercel"] .launch-inline-menu,
-:root[data-theme="vercel"] .session-menu-dropdown {
-  border-radius: var(--radius-lg);
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    0 26px 72px rgb(0 0 0 / 0.46);
-}
-
-:root[data-theme="vercel"] .home-host-card,
-:root[data-theme="vercel"] .home-project-card,
-:root[data-theme="vercel"] .home-workspace-add {
-  padding: 13px;
-}
-
-:root[data-theme="vercel"] .home-project-card {
-  padding-right: 36px;
-}
-
-:root[data-theme="vercel"] .session-peer-label,
-:root[data-theme="vercel"] .manage-projects-badge,
-:root[data-theme="vercel"] .session-menu-action-tag {
-  border-color: color-mix(in oklch, var(--accent-blue) 22%, var(--border));
-  color: var(--text-secondary);
-}
-
-@keyframes command-scanline {
-  0%, 100% { background-position: 0 -160%, 0 0, 0 0; }
-  48%, 58% { background-position: 0 135%, 0 0, 0 0; }
-}
-
-@keyframes command-led {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.58; }
-}
-
-/* Silver Atelier pass: warmer material depth for the separate `atelier` theme id. */
-:root[data-theme="atelier"] .app-layout {
-  background:
-    radial-gradient(ellipse 72% 38% at 50% -14%, color-mix(in oklch, var(--accent) 8%, transparent), transparent 58%),
-    radial-gradient(circle at 86% 9%, color-mix(in oklch, var(--text) 3.4%, transparent), transparent 32%),
-    radial-gradient(circle at 10% 102%, color-mix(in oklch, var(--accent) 3%, transparent), transparent 34%),
-    linear-gradient(180deg, #090807, #070605 72%);
-}
-
-:root[data-theme="atelier"] .main-panel {
-  background:
-    linear-gradient(180deg, color-mix(in oklch, var(--accent) 3%, transparent), transparent 220px),
-    var(--bg);
-}
-
-:root[data-theme="atelier"] .sidebar,
-:root[data-theme="atelier"] .main-header,
-:root[data-theme="atelier"] .sidebar-header,
-:root[data-theme="atelier"] .sidebar-footer {
-  background: color-mix(in oklch, var(--bg-sidebar) 92%, black);
-}
-
-@media (pointer: fine) {
-  :root[data-theme="atelier"] .sidebar {
-    position: relative;
-  }
-}
-
-:root[data-theme="atelier"] .sidebar::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0 1px,
-    color-mix(in oklch, white 0.5%, transparent) 1px 2px
-  );
-  opacity: 0.3;
-}
-
-:root[data-theme="atelier"] .sidebar-logo {
-  background: #090807;
-  border-color: color-mix(in oklch, var(--accent) 28%, var(--border));
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    0 8px 22px color-mix(in oklch, black 34%, transparent);
-}
-
-:root[data-theme="atelier"] .home {
-  padding: 30px;
-  background:
-    radial-gradient(ellipse 64% 34% at 50% -8%, color-mix(in oklch, var(--accent) 5.5%, transparent), transparent 58%),
-    radial-gradient(circle at 82% 8%, color-mix(in oklch, white 2.4%, transparent), transparent 30%),
-    linear-gradient(180deg, color-mix(in oklch, var(--bg-surface) 22%, transparent), transparent 260px);
-}
-
-:root[data-theme="atelier"] .home::before {
-  content: 'SILVER ATELIER';
-  color: var(--text-muted);
-  font-family: var(--font-tech);
-  font-weight: 600;
-  letter-spacing: 0.18em;
-}
-
-:root[data-theme="atelier"] .home-host-grid,
-:root[data-theme="atelier"] .home-project-grid {
-  gap: 14px;
-}
-
-:root[data-theme="atelier"] .home-host-card,
-:root[data-theme="atelier"] .home-project-card,
-:root[data-theme="atelier"] .home-workspace-add,
-:root[data-theme="atelier"] .sidebar-metrics,
-:root[data-theme="atelier"] .mp-section,
-:root[data-theme="atelier"] .modal-panel,
-:root[data-theme="atelier"] .launch-inline-menu,
-:root[data-theme="atelier"] .session-menu-dropdown {
-  background:
-    linear-gradient(180deg, color-mix(in oklch, white 3.2%, transparent), transparent 72px),
-    color-mix(in oklch, var(--bg-surface) 96%, white);
-  border-color: color-mix(in oklch, white 10%, var(--border));
-  box-shadow:
-    0 1px 3px color-mix(in oklch, black 8%, transparent),
-    inset 0 1px 0 color-mix(in oklch, white 6%, transparent);
-  transition:
-    background 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-:root[data-theme="atelier"] .modal-panel,
-:root[data-theme="atelier"] .launch-inline-menu,
-:root[data-theme="atelier"] .session-menu-dropdown {
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    0 26px 80px rgb(0 0 0 / 0.44);
-}
-
-:root[data-theme="atelier"] .home-host-card,
-:root[data-theme="atelier"] .home-project-card,
-:root[data-theme="atelier"] .home-workspace-add {
-  padding: 18px;
-}
-
-:root[data-theme="atelier"] .mp-section {
-  padding: 14px;
-}
-
-:root[data-theme="atelier"] .home-project-card {
-  padding-right: 38px;
-}
-
-:root[data-theme="atelier"] .home-host-card:hover,
-:root[data-theme="atelier"] .home-project-card:hover,
-:root[data-theme="atelier"] .home-workspace-suggestion:hover,
-:root[data-theme="atelier"] .mp-project-row:hover,
-:root[data-theme="atelier"] .mp-discovered-row:hover,
-:root[data-theme="atelier"] .session-item:hover {
-  background:
-    radial-gradient(ellipse 120% 100% at 0% 50%, color-mix(in oklch, var(--accent) 5.5%, transparent), transparent 70%),
-    color-mix(in oklch, var(--bg-hover) 80%, var(--bg-surface));
-  border-color: color-mix(in oklch, var(--accent) 24%, var(--border-strong));
-}
-
-:root[data-theme="atelier"] .home-host-card:hover,
-:root[data-theme="atelier"] .home-project-card:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklch, white 18%, var(--border));
-  box-shadow:
-    0 4px 12px color-mix(in oklch, black 12%, transparent),
-    inset 0 1px 0 color-mix(in oklch, white 8%, transparent);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-:root[data-theme="atelier"] .session-item {
-  gap: 10px;
-  padding: 8px 8px 8px 18px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-:root[data-theme="atelier"] .session-item.selected {
-  animation: atelier-selected-fade-in 0.3s ease-out;
-  background:
-    radial-gradient(ellipse 120% 100% at 0% 50%, color-mix(in oklch, var(--accent) 8%, transparent), transparent 70%),
-    color-mix(in oklch, var(--bg-selected) 92%, white);
-  border-color: color-mix(in oklch, var(--accent) 30%, var(--border-strong));
-  box-shadow:
-    inset 2px 0 0 var(--accent),
-    inset 0 1px 0 color-mix(in oklch, white 5%, transparent),
-    0 2px 8px color-mix(in oklch, var(--accent) 6%, transparent);
-}
-
-:root[data-theme="atelier"] .session-item.selected::before {
-  top: 5px;
-  bottom: 5px;
-  width: 2px;
-  background: linear-gradient(180deg, var(--accent), color-mix(in oklch, var(--accent) 70%, transparent));
-  border-radius: 999px;
-  box-shadow: 0 0 8px color-mix(in oklch, var(--accent) 30%, transparent);
-}
-
-:root[data-theme="atelier"] .session-item.selected::after {
-  content: none;
-}
-
-:root[data-theme="atelier"] .session-dot-indicator.working,
-:root[data-theme="atelier"] .session-dot.working,
-:root[data-theme="atelier"] .session-dot-indicator.active,
-:root[data-theme="atelier"] .session-dot-indicator.fading {
-  border-color: var(--accent);
-  box-shadow:
-    0 0 6px color-mix(in oklch, var(--accent) 25%, transparent),
-    inset 0 0 3px color-mix(in oklch, var(--accent) 40%, transparent);
-  animation: atelier-soft-pulse 2.5s ease-in-out infinite;
-}
-
-:root[data-theme="atelier"] .session-dot-indicator.unread,
-:root[data-theme="atelier"] .session-dot.unread,
-:root[data-theme="atelier"] .home-host-status.connected,
-:root[data-theme="atelier"] .home-host-status.local {
-  background: var(--accent);
-  border-color: var(--accent);
-  box-shadow: 0 0 8px color-mix(in oklch, var(--accent) 24%, transparent);
-}
-
-:root[data-theme="atelier"] .main-header-left .main-header-title::before,
-:root[data-theme="atelier"] .launch-target-line,
-:root[data-theme="atelier"] .session-menu-section-title,
-:root[data-theme="atelier"] .mp-section-label,
-:root[data-theme="atelier"] .modal-label,
-:root[data-theme="atelier"] .home-section-title {
-  color: var(--text-secondary);
-}
-
-:root[data-theme="atelier"] .home-section-title,
-:root[data-theme="atelier"] .mp-section-label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  margin-bottom: 10px;
-}
-
-:root[data-theme="atelier"] .launch-target-line::before,
-:root[data-theme="atelier"] .launch-target-line::after,
-:root[data-theme="atelier"] .session-menu-section-title::before,
-:root[data-theme="atelier"] .session-menu-section-title::after,
-:root[data-theme="atelier"] .mp-section-label::before,
-:root[data-theme="atelier"] .mp-section-label::after,
-:root[data-theme="atelier"] .modal-label::before,
-:root[data-theme="atelier"] .modal-label::after,
-:root[data-theme="atelier"] .home-section-title::before,
-:root[data-theme="atelier"] .home-section-title::after {
-  color: var(--text-bracket);
-}
-
-:root[data-theme="atelier"] .sidebar-metrics.tui::before {
-  content: 'HOST TELEMETRY';
-  color: var(--text-secondary);
-  text-shadow: none;
-}
-
-:root[data-theme="atelier"] .sidebar-metrics::after {
-  content: '';
-  border: 0;
-  background:
-    linear-gradient(color-mix(in oklch, var(--accent) 38%, transparent) 0 0) left top / 22px 1px no-repeat,
-    linear-gradient(color-mix(in oklch, var(--accent) 30%, transparent) 0 0) left top / 1px 22px no-repeat,
-    linear-gradient(color-mix(in oklch, var(--text) 16%, transparent) 0 0) right bottom / 26px 1px no-repeat,
-    linear-gradient(color-mix(in oklch, var(--text) 12%, transparent) 0 0) right bottom / 1px 26px no-repeat;
-  opacity: 0.82;
-}
-
-:root[data-theme="atelier"] .sidebar-metrics-row strong {
-  color: var(--text-heading);
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
-}
-
-:root[data-theme="atelier"] .sidebar-metrics-bar {
-  background: color-mix(in oklch, var(--bg) 82%, black);
-  border-color: color-mix(in oklch, var(--accent) 16%, var(--border-strong));
-}
-
-:root[data-theme="atelier"] .sidebar-metrics-bar i,
-:root[data-theme="atelier"] .sidebar-metrics-bar.battery i {
-  background: linear-gradient(90deg, color-mix(in oklch, var(--accent) 54%, var(--text-muted)), var(--accent));
-  box-shadow: inset 0 1px 0 color-mix(in oklch, white 18%, transparent);
-}
-
-:root[data-theme="atelier"] .session-peer-label,
-:root[data-theme="atelier"] .manage-projects-badge,
-:root[data-theme="atelier"] .session-menu-action-tag {
-  border-color: color-mix(in oklch, var(--accent) 18%, var(--border));
-  color: var(--text-secondary);
-}
-
-:root[data-theme="atelier"] .theme-menu-option {
-  border-radius: 999px;
-}
-
-:root[data-theme="atelier"] .main-header-pty-count {
-  border-color: color-mix(in oklch, var(--accent) 16%, var(--border-strong));
-  background: color-mix(in oklch, var(--bg-surface) 62%, var(--bg));
-}
-
-:root[data-theme="atelier"] .main-header-pty-live {
-  color: var(--text-heading);
-}
-
-:root[data-theme="atelier"] .main-header-pty-dead strong {
-  color: var(--text-secondary);
-}
-
-:root[data-theme="atelier"] .home-card-icon,
-:root[data-theme="atelier"] .folder-icon,
-:root[data-theme="atelier"] .mp-row-icon {
-  color: var(--accent);
-}
-
-:root[data-theme="atelier"] .folder-name.current {
-  color: var(--text-heading);
-}
-
-:root[data-theme="atelier"] .btn-icon:hover,
-:root[data-theme="atelier"] .session-close-btn:hover,
-:root[data-theme="atelier"] .home-project-remove:hover,
-:root[data-theme="atelier"] .mp-remove-btn:hover {
-  background: color-mix(in oklch, var(--accent) 10%, var(--bg-hover));
-  border-color: color-mix(in oklch, var(--accent) 24%, var(--border-strong));
-  color: var(--accent);
-}
-
-:root[data-theme="atelier"] .home-host-card::before,
-:root[data-theme="atelier"] .home-project-card::before,
-:root[data-theme="atelier"] .home-workspace-add::before,
-:root[data-theme="atelier"] .mp-section::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
-  mix-blend-mode: overlay;
-  opacity: 0.72;
-}
-
-:root[data-theme="atelier"] .home-host-card::after,
-:root[data-theme="atelier"] .home-project-card::after,
-:root[data-theme="atelier"] .home-workspace-add::after,
-:root[data-theme="atelier"] .mp-section::after,
-:root[data-theme="atelier"] .sidebar-metrics::after {
-  border-top-color: color-mix(in oklch, var(--text) 9%, transparent);
-  border-left-color: color-mix(in oklch, var(--accent) 7%, transparent);
-}
-
-:root[data-theme="atelier"] .home-host-card,
-:root[data-theme="atelier"] .home-project-card,
-:root[data-theme="atelier"] .home-workspace-add,
-:root[data-theme="atelier"] .mp-section,
-:root[data-theme="atelier"] .sidebar-metrics {
-  border-radius: var(--radius);
-}
-
-:root[data-theme="atelier"] .modal-panel,
-:root[data-theme="atelier"] .launch-inline-menu,
-:root[data-theme="atelier"] .session-menu-dropdown {
-  border-radius: var(--radius-lg);
-}
-
-:root[data-theme="atelier"] .session-title {
-  font-size: 11.5px;
-  font-weight: 450;
-  letter-spacing: -0.01em;
-  line-height: 1.35;
-}
-
-:root[data-theme="atelier"] .session-meta {
-  color: var(--text-muted);
-}
-
-:root[data-theme="atelier"] .theme-menu-active-dot {
-  background: var(--accent);
-}
-
-:root[data-theme="atelier"] .jump-to-bottom:hover {
-  background: color-mix(in oklch, var(--accent) 14%, var(--bg-hover));
-  border-color: color-mix(in oklch, var(--accent) 48%, var(--border));
-  color: var(--accent);
-}
-
-:root[data-theme="atelier"] .terminal-resize-overlay:hover {
-  background: color-mix(in oklch, var(--accent) 10%, var(--bg-hover));
-  border-color: color-mix(in oklch, var(--accent) 42%, var(--border));
-  color: var(--accent);
-}
-
-:root[data-theme="atelier"] .mobile-bottom-action.send-btn,
-:root[data-theme="atelier"] .mobile-bottom-action.keyboard-btn {
-  color: var(--accent);
-}
-
-:root[data-theme="atelier"] .mobile-bottom-action:active,
-:root[data-theme="atelier"] .mobile-bottom-action.armed,
-:root[data-theme="atelier"] .mobile-bottom-action.keyboard-btn.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-}
-
-@keyframes atelier-selected-fade-in {
-  from {
-    opacity: 0.7;
-    transform: translateX(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes atelier-soft-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(0.95); }
 }
 
 /* Menu positioning invariants: framing pseudo-elements must not pull menus back into flow. */
