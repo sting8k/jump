@@ -54,6 +54,16 @@ Default local UI:
 http://127.0.0.1:8790
 ```
 
+To expose `jumpd` on LAN/VPN/container networks, opt in explicitly:
+
+```toml
+# ~/.config/jump/host.toml
+listen = "0.0.0.0"
+port = 8790
+```
+
+`JUMPD_LISTEN=0.0.0.0` can override this for systemd/Docker. The default stays `127.0.0.1`; don't expose plain HTTP to untrusted networks without TLS/VPN/reverse proxy protection.
+
 Useful daemon commands:
 
 ```bash
