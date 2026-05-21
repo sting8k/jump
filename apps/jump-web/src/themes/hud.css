@@ -1,35 +1,36 @@
-/* jump Web UI — Signal HUD theme. */
+/* jump Web UI — Signal HUD theme. Optimized & Enhanced. */
 
 :root[data-theme="hud"] {
   /* Signal HUD: blue-gray instrument glass with restrained green/teal status accents. */
-  --bg: #172634;
-  --bg-sidebar: #152330;
-  --bg-surface: #2b4049;
-  --bg-hover: #34545f;
-  --bg-selected: #1f5a50;
-  --terminal-bg: #101b27;
-  --bg-void: #0d1621;
+  --bg: #0b151f;
+  --bg-sidebar: #09111a;
+  --bg-surface: rgba(27, 47, 58, 0.6);
+  --bg-hover: rgba(52, 84, 95, 0.4);
+  --bg-selected: rgba(31, 90, 80, 0.5);
+  --terminal-bg: #070d14;
+  --bg-void: #04080d;
 
-  --text: rgba(236, 248, 250, 0.86);
-  --text-secondary: rgba(199, 224, 226, 0.72);
-  --text-muted: rgba(161, 190, 194, 0.54);
-  --text-faint: rgba(112, 148, 153, 0.34);
-  --text-heading: #e5f2f4;
-  --text-bracket: rgba(92, 217, 181, 0.44);
+  --text: #e1f5fe;
+  --text-secondary: #b0bec5;
+  --text-muted: #78909c;
+  --text-faint: rgba(120, 144, 156, 0.3);
+  --text-heading: #ffffff;
+  --text-bracket: #4be0b2;
 
-  --border: rgba(92, 217, 181, 0.22);
-  --border-strong: #587782;
+  --border: rgba(75, 224, 178, 0.15);
+  --border-strong: rgba(88, 119, 130, 0.6);
 
   --accent: #4be0b2;
-  --accent-warn: #9bd36d;
-  --accent-blue: #2fac8b;
+  --accent-glow: rgba(75, 224, 178, 0.35);
+  --accent-warn: #ffb300;
+  --accent-blue: #00e5ff;
 
   --unread: #4be0b2;
-  --active: #9bd36d;
+  --active: #ffb300;
 
   --status-error: #ff5f57;
   --status-connected: #4be0b2;
-  --status-disconnected: #9bd36d;
+  --status-disconnected: #78909c;
 
   --font-tech: 'Fira Code', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   --radius: 2px;
@@ -39,13 +40,16 @@
   --edge-shadow: color-mix(in oklch, black 66%, var(--bg));
 }
 
+/* ── Layout & backgrounds ── */
+
 :root[data-theme="hud"] .app-layout {
+  position: relative;
   background:
-    radial-gradient(ellipse 74% 34% at 50% -16%, rgba(75, 224, 178, 0.11), transparent 58%),
-    radial-gradient(circle at 88% 8%, rgba(47, 172, 139, 0.08), transparent 28%),
-    repeating-linear-gradient(90deg, transparent 0 74px, rgba(142, 202, 208, 0.028) 74px 75px),
-    repeating-linear-gradient(0deg, transparent 0 74px, rgba(142, 202, 208, 0.022) 74px 75px),
-    linear-gradient(180deg, rgba(32, 66, 78, 0.72) 0%, #172634 100%);
+    radial-gradient(circle at 50% 50%, transparent 40%, rgba(4, 8, 13, 0.7) 100%),
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(0, 229, 255, 0.12), transparent 60%),
+    repeating-linear-gradient(90deg, transparent 0 74px, rgba(142, 202, 208, 0.026) 74px 75px),
+    repeating-linear-gradient(0deg, transparent 0 74px, rgba(142, 202, 208, 0.02) 74px 75px),
+    linear-gradient(180deg, #0e1e29 0%, #050a0f 100%);
 }
 
 :root[data-theme="hud"] .main-panel {
@@ -64,15 +68,18 @@
 }
 
 :root[data-theme="hud"] .sidebar-logo {
-  background: #172634;
+  background: #0b151f;
   border-color: color-mix(in oklch, var(--accent) 22%, var(--border));
   box-shadow:
-    inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 10%, transparent),
-    0 0 16px color-mix(in oklch, black 24%, transparent);
+    inset 0 0 0 1px rgba(75, 224, 178, 0.38),
+    0 0 20px rgba(75, 224, 178, 0.34),
+    0 0 48px rgba(47, 172, 139, 0.24),
+    0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 :root[data-theme="hud"] .home {
-  padding: 24px;
+  position: relative;
+  padding: 40px 24px 24px;
   background:
     linear-gradient(180deg, rgba(75, 224, 178, 0.085), transparent 180px),
     repeating-linear-gradient(90deg, transparent 0 74px, color-mix(in oklch, var(--text) 2.6%, transparent) 74px 75px),
@@ -80,18 +87,24 @@
 }
 
 :root[data-theme="hud"] .home::before {
-  content: 'HUD DASHBOARD';
-  color: var(--text-secondary);
+  content: '// SYSTEM OVERVIEW — HUD DASHBOARD ACTIVE';
+  position: absolute;
+  top: 12px;
+  left: 24px;
+  color: var(--accent);
   font-family: var(--font-tech);
   font-weight: 600;
-  letter-spacing: 0.28em;
-  text-shadow: none;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  opacity: 0.65;
 }
 
 :root[data-theme="hud"] .home-host-grid,
 :root[data-theme="hud"] .home-project-grid {
   gap: 10px;
 }
+
+/* ── Data cards & refraction panels ── */
 
 :root[data-theme="hud"] .home-host-card,
 :root[data-theme="hud"] .home-project-card,
@@ -101,21 +114,27 @@
 :root[data-theme="hud"] .modal-panel,
 :root[data-theme="hud"] .launch-inline-menu,
 :root[data-theme="hud"] .session-menu-dropdown {
+  position: relative;
   background:
-    linear-gradient(180deg, rgba(142, 202, 208, 0.04), transparent 72px),
-    color-mix(in oklch, var(--bg-surface) 92%, black);
-  border-color: color-mix(in oklch, var(--border-strong) 70%, var(--border));
+    linear-gradient(135deg, rgba(0, 229, 255, 0.045) 0%, transparent 48%),
+    linear-gradient(180deg, rgba(142, 202, 208, 0.07), transparent 72px),
+    var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow:
     inset 0 1px 0 var(--edge-hi),
     inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 5%, transparent),
     0 14px 34px color-mix(in oklch, black 30%, transparent);
+  transform: translateZ(0);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.3s ease, box-shadow 0.3s ease;
 }
 
 :root[data-theme="hud"] .modal-panel,
 :root[data-theme="hud"] .launch-inline-menu,
 :root[data-theme="hud"] .session-menu-dropdown {
   border-radius: var(--radius-lg);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   box-shadow:
     inset 0 1px 0 var(--edge-hi),
     0 28px 78px rgb(0 0 0 / 0.48);
@@ -123,13 +142,29 @@
 
 :root[data-theme="hud"] .home-host-card,
 :root[data-theme="hud"] .home-project-card,
+:root[data-theme="hud"] .sidebar-metrics {
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+:root[data-theme="hud"] .home-host-card,
 :root[data-theme="hud"] .home-workspace-add {
   padding: 14px;
 }
 
 :root[data-theme="hud"] .home-project-card {
-  padding-right: 36px;
+  padding: 14px 36px 14px 14px;
 }
+
+
+:root[data-theme="hud"] .home-host-card,
+:root[data-theme="hud"] .home-project-card,
+:root[data-theme="hud"] .sidebar-metrics,
+:root[data-theme="hud"] .mp-section {
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+/* ── Hover effects & holographic depth ── */
 
 :root[data-theme="hud"] .home-host-card:hover,
 :root[data-theme="hud"] .home-project-card:hover,
@@ -138,12 +173,76 @@
 :root[data-theme="hud"] .mp-discovered-row:hover,
 :root[data-theme="hud"] .session-item:hover {
   background:
-    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 5%, transparent), transparent 68%),
-    color-mix(in oklch, var(--bg-hover) 78%, var(--bg-surface));
-  border-color: color-mix(in oklch, var(--accent-blue) 24%, var(--border-strong));
+    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 10%, transparent), transparent 68%),
+    var(--bg-hover);
+  border-color: var(--accent-blue);
 }
 
+:root[data-theme="hud"] .home-host-card:hover,
+:root[data-theme="hud"] .home-project-card:hover {
+  transform: translateY(-3px) scale(1.01) translateZ(0);
+  box-shadow:
+    inset 0 1px 0 var(--edge-hi),
+    inset 0 0 0 1px rgba(75, 224, 178, 0.46),
+    0 0 20px rgba(0, 229, 255, 0.18),
+    inset 0 0 12px rgba(0, 229, 255, 0.1),
+    0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+:root[data-theme="hud"] .home-host-card::before,
+:root[data-theme="hud"] .home-project-card::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(75, 224, 178, 0.68) 0%,
+    rgba(47, 172, 139, 0.46) 50%,
+    rgba(75, 224, 178, 0.68) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  pointer-events: none;
+}
+
+:root[data-theme="hud"] .home-host-card:hover::before,
+:root[data-theme="hud"] .home-project-card:hover::before {
+  opacity: 1;
+}
+
+:root[data-theme="hud"] .home-host-card::after,
+:root[data-theme="hud"] .home-project-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    transparent 40%,
+    rgba(75, 224, 178, 0.22) 50%,
+    transparent 60%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: hud-hologram-shimmer 8s ease-in-out infinite;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+:root[data-theme="hud"] .home-host-card:hover .home-host-name,
+:root[data-theme="hud"] .home-project-card:hover .home-project-name {
+  color: #fff;
+  animation: hud-text-glitch 0.3s linear infinite;
+}
+
+/* ── Selected items & target frames ── */
+
 :root[data-theme="hud"] .session-item.selected {
+  position: relative;
   background:
     linear-gradient(180deg, transparent 0%, color-mix(in oklch, var(--accent) 7%, transparent) 50%, transparent 100%) 0 -160% / 100% 220% no-repeat,
     linear-gradient(90deg, color-mix(in oklch, var(--accent) 10%, transparent), transparent 74%),
@@ -152,13 +251,19 @@
   box-shadow:
     inset 2px 0 0 var(--accent),
     inset 0 1px 0 var(--edge-hi),
-    0 0 0 1px color-mix(in oklch, var(--accent-blue) 10%, transparent);
+    0 0 0 1px rgba(75, 224, 178, 0.38),
+    0 0 15px var(--accent-glow),
+    inset 0 0 8px rgba(75, 224, 178, 0.2),
+    0 4px 12px rgba(0, 0, 0, 0.3);
   animation: hud-sweep 4.2s ease-in-out infinite;
 }
 
 :root[data-theme="hud"] .session-item.selected::before {
+  content: '';
+  position: absolute;
   top: 4px;
   bottom: 4px;
+  left: 0;
   width: 2px;
   background: var(--accent);
   border-radius: 0;
@@ -184,6 +289,99 @@
   opacity: 0.78;
 }
 
+/* ── Metrics & textures ── */
+
+:root[data-theme="hud"] .sidebar-metrics.tui::before {
+  content: '╭─ SERVER STATS ─╮';
+  color: var(--accent);
+  text-shadow: none;
+}
+
+:root[data-theme="hud"] .sidebar-metrics::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 0;
+  border-radius: 0;
+  background:
+    linear-gradient(var(--accent) 0 0) left top / 24px 1px no-repeat,
+    linear-gradient(var(--accent) 0 0) left top / 1px 24px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right bottom / 28px 1px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 28px no-repeat,
+    repeating-linear-gradient(0deg, transparent 0 6px, color-mix(in oklch, var(--accent) 9%, transparent) 6px 7px);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+:root[data-theme="hud"] .sidebar-metrics-row strong {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'tnum' 1;
+}
+
+:root[data-theme="hud"] .sidebar-metrics-bar {
+  height: 6px;
+  padding: 1px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 0;
+}
+
+:root[data-theme="hud"] .sidebar-metrics-bar i,
+:root[data-theme="hud"] .sidebar-metrics-bar.battery i {
+  position: relative;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--accent) 0px,
+    var(--accent) 4px,
+    transparent 4px,
+    transparent 6px
+  );
+  box-shadow: 0 0 8px var(--accent);
+}
+
+:root[data-theme="hud"] .sidebar-metrics-bar i::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 4px;
+  background: #fff;
+  filter: blur(1px);
+  opacity: 0.8;
+  animation: hud-signal-pulse 1.5s infinite linear;
+}
+
+/* ── Scanlines: pointer-fine only keeps mobile sidebar overlay geometry intact. ── */
+
+@media (pointer: fine) {
+  :root[data-theme="hud"] .sidebar,
+  :root[data-theme="hud"] .main-panel {
+    position: relative;
+    isolation: isolate;
+  }
+
+  :root[data-theme="hud"] .sidebar::before,
+  :root[data-theme="hud"] .main-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      rgba(75, 224, 178, 0.015) 1px,
+      transparent 2px,
+      transparent 4px
+    );
+    pointer-events: none;
+    mix-blend-mode: screen;
+  }
+}
+
+
+/* ── Kinetic & status indicators ── */
+
 :root[data-theme="hud"] .session-dot-indicator.working,
 :root[data-theme="hud"] .session-dot.working,
 :root[data-theme="hud"] .session-dot-indicator.active,
@@ -204,6 +402,28 @@
   box-shadow: 0 0 10px color-mix(in oklch, var(--accent-blue) 38%, transparent);
   animation: hud-status-pulse 2s ease-in-out infinite;
 }
+
+:root[data-theme="hud"] .session-item.selected .session-title::after {
+  content: ' ▌';
+  color: var(--accent);
+  animation: hud-cursor-blink 1.2s step-end infinite;
+  font-size: 0.9em;
+}
+
+:root[data-theme="hud"] .session-item.selected .session-dot-indicator {
+  position: relative;
+}
+
+:root[data-theme="hud"] .session-item.selected .session-dot-indicator::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  animation: hud-transmission 2s ease-in-out infinite;
+}
+
+/* ── Utilities & system headers ── */
 
 :root[data-theme="hud"] .main-header-left .main-header-title::before,
 :root[data-theme="hud"] .launch-target-line,
@@ -231,51 +451,11 @@
   color: color-mix(in oklch, var(--accent-blue) 55%, var(--text-bracket));
 }
 
-:root[data-theme="hud"] .sidebar-metrics.tui::before {
-  content: '╭─ SERVER STATS ─╮';
-  color: var(--accent);
-  text-shadow: none;
-}
-
-:root[data-theme="hud"] .sidebar-metrics::after {
-  content: '';
-  border: 0;
-  border-radius: 0;
-  background:
-    linear-gradient(var(--accent) 0 0) left top / 24px 1px no-repeat,
-    linear-gradient(var(--accent) 0 0) left top / 1px 24px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 28px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 28px no-repeat,
-    repeating-linear-gradient(0deg, transparent 0 6px, color-mix(in oklch, var(--accent) 9%, transparent) 6px 7px);
-  opacity: 0.72;
-}
-
-:root[data-theme="hud"] .sidebar-metrics-row strong {
-  color: var(--text-secondary);
-  font-variant-numeric: tabular-nums slashed-zero;
-  font-feature-settings: 'tnum' 1;
-}
-
-:root[data-theme="hud"] .sidebar-metrics-bar {
-  background:
-    repeating-linear-gradient(90deg, color-mix(in oklch, var(--border-strong) 84%, black) 0 1px, transparent 1px 7px),
-    var(--bg);
-  border-color: color-mix(in oklch, var(--accent-blue) 30%, var(--border-strong));
-  border-radius: 0;
-}
-
-:root[data-theme="hud"] .sidebar-metrics-bar i,
-:root[data-theme="hud"] .sidebar-metrics-bar.battery i {
-  background: linear-gradient(90deg, var(--accent), color-mix(in oklch, var(--accent-blue) 82%, var(--accent)));
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, white 22%, transparent),
-    0 0 8px color-mix(in oklch, var(--accent) 26%, transparent);
-}
-
 :root[data-theme="hud"] .session-title,
 :root[data-theme="hud"] .folder-name,
 :root[data-theme="hud"] .sidebar-metrics-row strong {
   font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'tnum' 1;
 }
 
 :root[data-theme="hud"] .session-peer-label,
@@ -283,6 +463,24 @@
 :root[data-theme="hud"] .session-menu-action-tag {
   border-color: color-mix(in oklch, var(--accent-blue) 24%, var(--border));
   color: var(--text-secondary);
+}
+
+
+:root[data-theme="hud"] .home-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-tech);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--accent-blue);
+}
+
+:root[data-theme="hud"] .home-section-title::after {
+  content: '';
+  flex-grow: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 229, 255, 0.4), transparent);
 }
 
 :root[data-theme="hud"] .theme-menu-option {
@@ -324,6 +522,14 @@
     linear-gradient(135deg, #101b27 0 46%, #4be0b2 46% 58%, #2fac8b 58% 70%, #587782 70%);
 }
 
+/* ── Animation timelines ── */
+
+@keyframes hud-text-glitch {
+  0% { text-shadow: 1px 0 0 rgba(255, 0, 0, 0.5), -1px 0 0 rgba(0, 255, 255, 0.5); }
+  50% { text-shadow: -1px 0 0 rgba(255, 0, 0, 0.5), 1px 0 0 rgba(0, 255, 255, 0.5); }
+  100% { text-shadow: 0 0 0 rgba(255, 0, 0, 0.5), 0 0 0 rgba(0, 255, 255, 0.5); }
+}
+
 @keyframes hud-sweep {
   0%, 100% { background-position: 0 -160%, 0 0, 0 0; }
   48%, 58% { background-position: 0 135%, 0 0, 0 0; }
@@ -334,267 +540,52 @@
   50% { opacity: 0.62; }
 }
 
-
-/* Holographic depth and chromatic aberration */
-:root[data-theme="hud"] .home-host-card::before,
-:root[data-theme="hud"] .home-project-card::before {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, 
-    rgba(75, 224, 178, 0.68) 0%, 
-    rgba(47, 172, 139, 0.46) 50%, 
-    rgba(75, 224, 178, 0.68) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  opacity: 0;
-  transition: opacity 0.4s ease;
-  pointer-events: none;
-}
-
-:root[data-theme="hud"] .home-host-card:hover::before,
-:root[data-theme="hud"] .home-project-card:hover::before {
-  opacity: 1;
-}
-
-/* Holographic shimmer animation */
 @keyframes hud-hologram-shimmer {
   0% { background-position: -200% center; }
   100% { background-position: 200% center; }
 }
 
-:root[data-theme="hud"] .home-host-card::after,
-:root[data-theme="hud"] .home-project-card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    110deg,
-    transparent 0%,
-    transparent 40%,
-    rgba(75, 224, 178, 0.34) 50%,
-    transparent 60%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: hud-hologram-shimmer 8s ease-in-out infinite;
-  border-radius: inherit;
-  pointer-events: none;
-  mix-blend-mode: screen;
-}
-
-/* Selected session keeps the angular corner frame; sweep is handled by hud-sweep on the background layers. */
-
-/* Backdrop blur for depth */
-:root[data-theme="hud"] .modal-panel,
-:root[data-theme="hud"] .launch-inline-menu,
-:root[data-theme="hud"] .session-menu-dropdown {
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
-}
-
-:root[data-theme="hud"] .home-host-card,
-:root[data-theme="hud"] .home-project-card,
-:root[data-theme="hud"] .sidebar-metrics {
-  backdrop-filter: blur(8px) saturate(120%);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
-}
-
-/* Holographic glow on active elements */
-:root[data-theme="hud"] .session-item.selected {
-  box-shadow:
-    inset 2px 0 0 var(--accent),
-    inset 0 1px 0 var(--edge-hi),
-    0 0 0 1px rgba(75, 224, 178, 0.38),
-    0 0 20px rgba(75, 224, 178, 0.46),
-    0 0 50px rgba(75, 224, 178, 0.24),
-    0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-/* Chromatic aberration text effect on hover */
-:root[data-theme="hud"] .home-host-card:hover .home-host-name,
-:root[data-theme="hud"] .home-project-card:hover .home-project-name {
-  text-shadow: 
-    -0.5px 0 0 rgba(255, 0, 100, 0.3),
-    0.5px 0 0 rgba(0, 255, 255, 0.3);
-}
-
-/* Floating depth effect */
-:root[data-theme="hud"] .home-host-card,
-:root[data-theme="hud"] .home-project-card {
-  transform: translateZ(0);
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.3s ease, box-shadow 0.3s ease;
-}
-
-:root[data-theme="hud"] .home-host-card:hover,
-:root[data-theme="hud"] .home-project-card:hover {
-  transform: translateY(-2px) translateZ(0);
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    inset 0 0 0 1px rgba(75, 224, 178, 0.46),
-    0 0 30px rgba(75, 224, 178, 0.34),
-    0 8px 24px rgba(0, 0, 0, 0.4);
-}
-
-/* Holographic edge lighting */
-:root[data-theme="hud"] .sidebar-logo {
-  box-shadow:
-    inset 0 0 0 1px rgba(75, 224, 178, 0.38),
-    0 0 20px rgba(75, 224, 178, 0.34),
-    0 0 48px rgba(47, 172, 139, 0.24),
-    0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-/* Refraction effect on panels */
-:root[data-theme="hud"] .home-host-card,
-:root[data-theme="hud"] .home-project-card,
-:root[data-theme="hud"] .sidebar-metrics {
-  background:
-    linear-gradient(135deg, rgba(75, 224, 178, 0.05) 0%, transparent 50%),
-    linear-gradient(180deg, rgba(142, 202, 208, 0.075), transparent 72px),
-    color-mix(in oklch, var(--bg-surface) 92%, black);
-}
-
-/* Scan-line texture overlay: pointer-fine only so mobile keeps the base sidebar overlay geometry. */
-@media (pointer: fine) {
-  :root[data-theme="hud"] .sidebar,
-  :root[data-theme="hud"] .main-panel {
-    position: relative;
-    isolation: isolate;
-  }
-
-  :root[data-theme="hud"] .sidebar::before,
-  :root[data-theme="hud"] .main-panel::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent 0px,
-      rgba(75, 224, 178, 0.02) 1px,
-      transparent 2px,
-      transparent 4px
-    );
-    pointer-events: none;
-    mix-blend-mode: screen;
-  }
-}
-
-
-:root[data-theme="hud"] .sidebar-footer,
-:root[data-theme="hud"] .sidebar-metrics-bar i,
-:root[data-theme="hud"] .session-dot-indicator {
-  position: relative;
-}
-
-/* Holographic flicker on live/unread status indicators. */
 @keyframes hud-status-pulse {
   0%, 100% { opacity: 1; filter: brightness(1); }
-  50% { opacity: 0.8; filter: brightness(1.4); }
+  50% { opacity: 0.7; filter: brightness(1.3); }
 }
 
-
-
-/* Kinetic data elements */
-
-/* Typing cursor on selected session */
 @keyframes hud-cursor-blink {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0; }
 }
 
-:root[data-theme="hud"] .session-item.selected .session-title::after {
-  content: '▌';
-  color: var(--accent);
-  margin-left: 4px;
-  animation: hud-cursor-blink 1.2s step-end infinite;
-  font-size: 0.9em;
-}
-
-/* Signal strength bars animation on metrics */
 @keyframes hud-signal-pulse {
-  0%, 100% { transform: scaleY(0.6); opacity: 0.5; }
-  50% { transform: scaleY(1); opacity: 1; }
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
 }
 
-:root[data-theme="hud"] .sidebar-metrics-bar i::after {
-  content: '';
-  position: absolute;
-  right: -3px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--accent);
-  animation: hud-signal-pulse 1.8s ease-in-out infinite;
-  box-shadow: 0 0 6px var(--accent);
-}
-
-/* Data stream scrolling in sidebar footer */
-@keyframes hud-data-stream {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-:root[data-theme="hud"] .sidebar-footer::after {
-  content: '01001000 01010101 01000100 00100000 01010011 01011001 01010011 01010100 01000101 01001101 00100000 01001111 01001110 01001100 01001001 01001110 01000101 00100000 01001000 01010101 01000100 00100000 01010011 01011001 01010011 01010100 01000101 01001101 00100000 01001111 01001110 01001100 01001001 01001110 01000101';
-  position: absolute;
-  bottom: 2px;
-  left: 0;
-  right: 0;
-  font-size: 7px;
-  color: color-mix(in oklch, var(--accent-blue) 18%, transparent);
-  white-space: nowrap;
-  overflow: hidden;
-  font-family: var(--font-tech);
-  letter-spacing: 0.05em;
-  animation: hud-data-stream 20s linear infinite;
-  pointer-events: none;
-  opacity: 0.4;
-}
-
-/* Transmission indicator pulse on active sessions */
 @keyframes hud-transmission {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.15); }
+  0% { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.4); }
 }
-
-:root[data-theme="hud"] .session-item.selected .session-dot-indicator::before {
-  content: '';
-  position: absolute;
-  inset: -3px;
-  border: 1px solid var(--accent);
-  border-radius: 50%;
-  animation: hud-transmission 2s ease-in-out infinite;
-}
-
-/* Hover scan removed: card ::before is reserved for the holographic border. */
 
 @media (prefers-reduced-motion: reduce) {
   :root[data-theme="hud"] .home-host-card,
   :root[data-theme="hud"] .home-project-card,
   :root[data-theme="hud"] .session-item.selected,
-  :root[data-theme="hud"] .session-dot-indicator.unread,
-  :root[data-theme="hud"] .session-dot.unread,
-  :root[data-theme="hud"] .home-host-status.connected,
-  :root[data-theme="hud"] .home-host-status.local,
-  :root[data-theme="hud"] .session-item.selected .session-title::after,
+  :root[data-theme="hud"] .session-dot-indicator,
+  :root[data-theme="hud"] .session-dot,
+  :root[data-theme="hud"] .home-host-status,
   :root[data-theme="hud"] .sidebar-metrics-bar i::after,
-  :root[data-theme="hud"] .sidebar-footer::after,
+  :root[data-theme="hud"] .session-item.selected .session-title::after,
   :root[data-theme="hud"] .session-item.selected .session-dot-indicator::before {
-    animation: none;
-    transform: none;
+    animation: none !important;
+    transform: none !important;
   }
 
   :root[data-theme="hud"] .home-host-card::after,
   :root[data-theme="hud"] .home-project-card::after {
-    animation: none;
-    opacity: 0.35;
+    animation: none !important;
+    opacity: 0.15;
   }
-  
+
   :root[data-theme="hud"] .session-item.selected .session-title::after {
-    opacity: 0;
+    display: none;
   }
 }

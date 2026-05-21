@@ -1,87 +1,86 @@
-/* jump Web UI — Command Center theme. */
+/* jump Web UI — Command Center theme (Refined Edition). */
 
 :root[data-theme="vercel"] {
   /* Command Center: black cockpit UI, hard geometry, and one HUD-cyan state channel. */
-  --bg: #000;
-  --bg-sidebar: #030506;
-  --bg-surface: #070a0c;
-  --bg-hover: #0d1417;
-  --bg-selected: #101b20;
-  --terminal-bg: #000;
+  --bg: #0a0e12;
+  --bg-sidebar: #06090b;
+  --bg-surface: #0e141b;
+  --bg-hover: #142229;
+  --bg-selected: #162a35;
+  --terminal-bg: #030507;
   --bg-void: #000;
 
-  --text: #f3f8fa;
-  --text-secondary: #a5b3b8;
-  --text-muted: #637278;
-  --text-faint: #263238;
-  --text-heading: #d9f7ff;
-  --text-bracket: #34515b;
+  --text: #f0f7f9;
+  --text-secondary: #8ea1a8;
+  --text-muted: #52666d;
+  --text-faint: #202e35;
+  --text-heading: #bbf3ff;
+  --text-bracket: #2d4650;
 
-  --border: #11191d;
-  --border-strong: #263940;
+  --border: #18262d;
+  --border-strong: #2e4854;
 
-  --accent: #7de7ff;
-  --accent-warn: #c5d8de;
-  --accent-blue: #7de7ff;
+  --accent: #00e5ff;
+  --accent-warn: #e2ecf0;
+  --accent-blue: #00e5ff;
 
-  --unread: #7de7ff;
-  --active: #f3f8fa;
+  --unread: #00e5ff;
+  --active: #f0f7f9;
 
   --status-error: #ff453a;
-  --status-connected: #7de7ff;
-  --status-disconnected: #637278;
+  --status-connected: #00e5ff;
+  --status-disconnected: #52666d;
 
   --font-tech: 'Fira Code', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --radius: 3px;
+  --radius: 4px;
   --radius-sm: 2px;
-  --radius-lg: 5px;
-  --edge-hi: oklch(100% 0 0 / 0.065);
-  --edge-shadow: color-mix(in oklch, black 68%, var(--bg));
+  --radius-lg: 8px;
+  --edge-hi: oklch(100% 0 0 / 0.08);
+  --edge-shadow: rgb(0 0 0 / 0.8);
 }
 
 :root[data-theme="vercel"] .app-layout {
   background:
-    radial-gradient(ellipse 76% 34% at 50% -18%, color-mix(in oklch, var(--accent-blue) 7%, transparent), transparent 54%),
-    radial-gradient(circle at 86% 8%, color-mix(in oklch, var(--accent-blue) 3.8%, transparent), transparent 28%),
-    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 1.8%, transparent), transparent 210px),
-    repeating-linear-gradient(90deg, transparent 0 23px, color-mix(in oklch, var(--accent-blue) 3.1%, transparent) 23px 24px),
-    repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in oklch, white 1.25%, transparent) 23px 24px),
-    #000;
+    radial-gradient(ellipse 60% 40% at 50% -10%, color-mix(in oklch, var(--accent-blue) 12%, transparent), transparent 70%),
+    radial-gradient(circle at 90% 10%, color-mix(in oklch, var(--accent-blue) 4%, transparent), transparent 35%),
+    var(--bg);
 }
 
 :root[data-theme="vercel"] .main-panel {
   background:
-    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 2.2%, transparent), transparent 180px),
+    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 2.5%, transparent), transparent 240px),
     var(--bg);
+  box-shadow: inset 1px 0 0 var(--border);
 }
 
 :root[data-theme="vercel"] .sidebar,
 :root[data-theme="vercel"] .main-header,
 :root[data-theme="vercel"] .sidebar-header,
 :root[data-theme="vercel"] .sidebar-footer {
-  background: color-mix(in oklch, var(--bg) 92%, var(--accent-blue) 3%);
+  background: var(--bg-sidebar);
+  border-color: var(--border);
 }
 
 :root[data-theme="vercel"] .sidebar-logo {
-  background: #000;
-  border-color: color-mix(in oklch, var(--accent-blue) 34%, var(--border));
-  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 12%, transparent);
+  background: var(--bg-void);
+  border-color: color-mix(in oklch, var(--accent-blue) 40%, var(--border));
+  box-shadow: 0 0 12px color-mix(in oklch, var(--accent-blue) 15%, transparent);
 }
 
 :root[data-theme="vercel"] .home {
   background:
-    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 2.8%, transparent), transparent 160px),
-    repeating-linear-gradient(90deg, transparent 0 23px, color-mix(in oklch, var(--accent-blue) 2.2%, transparent) 23px 24px),
-    repeating-linear-gradient(0deg, transparent 0 23px, color-mix(in oklch, white 1%, transparent) 23px 24px);
+    linear-gradient(180deg, color-mix(in oklch, var(--accent-blue) 3%, transparent), transparent 200px),
+    repeating-linear-gradient(90deg, transparent 0 40px, color-mix(in oklch, var(--accent-blue) 1.5%, transparent) 40px 41px),
+    repeating-linear-gradient(0deg, transparent 0 40px, color-mix(in oklch, white 0.8%, transparent) 40px 41px);
 }
 
 :root[data-theme="vercel"] .home::before {
   content: 'COMMAND CENTER';
   color: var(--accent-blue);
   font-family: var(--font-tech);
-  font-weight: 500;
-  letter-spacing: 0.24em;
-  text-shadow: 0 0 10px color-mix(in oklch, var(--accent-blue) 30%, transparent);
+  font-weight: 600;
+  letter-spacing: 0.35em;
+  text-shadow: 0 0 12px color-mix(in oklch, var(--accent-blue) 50%, transparent);
 }
 
 :root[data-theme="vercel"] .home-host-card,
@@ -93,12 +92,13 @@
 :root[data-theme="vercel"] .launch-inline-menu,
 :root[data-theme="vercel"] .session-menu-dropdown {
   background:
-    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 4.5%, transparent), transparent 58px),
-    color-mix(in oklch, var(--bg-surface) 96%, black);
-  border-color: color-mix(in oklch, var(--accent-blue) 16%, var(--border));
+    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 3.5%, transparent), transparent 80px),
+    var(--bg-surface);
+  border: 1px solid color-mix(in oklch, var(--accent-blue) 12%, var(--border));
   box-shadow:
     inset 0 1px 0 var(--edge-hi),
-    inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 4%, transparent);
+    0 4px 20px rgb(0 0 0 / 0.4);
+  transition: background 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root[data-theme="vercel"] .home-host-card:hover,
@@ -108,50 +108,54 @@
 :root[data-theme="vercel"] .mp-discovered-row:hover,
 :root[data-theme="vercel"] .session-item:hover {
   background:
-    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 5%, transparent), transparent 70%),
-    color-mix(in oklch, var(--bg-hover) 76%, var(--bg-surface));
-  border-color: color-mix(in oklch, var(--accent-blue) 30%, var(--border-strong));
+    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 6%, transparent), transparent 80%),
+    var(--bg-hover);
+  border-color: color-mix(in oklch, var(--accent-blue) 40%, var(--border-strong));
+}
+
+:root[data-theme="vercel"] .home-host-card:hover,
+:root[data-theme="vercel"] .home-project-card:hover {
+  transform: translateY(-1px);
 }
 
 :root[data-theme="vercel"] .session-item.selected {
   background:
-    linear-gradient(180deg, transparent 0%, color-mix(in oklch, var(--accent-blue) 11%, transparent) 50%, transparent 100%) 0 -160% / 100% 220% no-repeat,
-    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 14%, transparent), transparent 72%),
-    color-mix(in oklch, var(--bg-selected) 88%, var(--bg));
-  border-color: color-mix(in oklch, var(--accent-blue) 48%, var(--border-strong));
+    linear-gradient(180deg, transparent 0%, color-mix(in oklch, var(--accent-blue) 8%, transparent) 50%, transparent 100%) 0 -160% / 100% 220% no-repeat,
+    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 15%, transparent), transparent 80%),
+    var(--bg-selected);
+  border-color: color-mix(in oklch, var(--accent-blue) 60%, var(--border-strong));
   box-shadow:
     inset 2px 0 0 var(--accent-blue),
     inset 0 1px 0 var(--edge-hi),
-    0 0 0 1px color-mix(in oklch, var(--accent-blue) 8%, transparent);
-  animation: command-scanline 3.8s ease-in-out infinite;
+    0 0 14px color-mix(in oklch, var(--accent-blue) 12%, transparent);
+  animation: command-scanline 4s ease-in-out infinite;
 }
 
 :root[data-theme="vercel"] .session-item.selected::before {
-  top: 4px;
-  bottom: 4px;
-  width: 2px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
   background: var(--accent-blue);
-  border-radius: 0;
-  box-shadow: 0 0 10px color-mix(in oklch, var(--accent-blue) 44%, transparent);
+  box-shadow: 0 0 12px var(--accent-blue);
 }
 
 :root[data-theme="vercel"] .session-item.selected::after {
   content: '';
   position: absolute;
-  inset: 2px;
-  left: 6px;
+  inset: 1px;
+  left: 5px;
   transform: none;
   pointer-events: none;
   background:
-    linear-gradient(var(--accent-blue) 0 0) left top / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left top / 1px 9px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right top / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right top / 1px 9px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left bottom / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left bottom / 1px 9px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 9px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 9px no-repeat;
-  opacity: 0.7;
+    linear-gradient(var(--accent-blue) 0 0) left top / 6px 1px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) left top / 1px 6px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right top / 6px 1px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right top / 1px 6px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) left bottom / 6px 1px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) left bottom / 1px 6px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right bottom / 6px 1px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 6px no-repeat;
+  opacity: 0.85;
 }
 
 :root[data-theme="vercel"] .session-dot-indicator.working,
@@ -160,9 +164,9 @@
 :root[data-theme="vercel"] .session-dot-indicator.fading {
   border-color: var(--accent-blue);
   box-shadow:
-    0 0 7px color-mix(in oklch, var(--accent-blue) 34%, transparent),
-    inset 0 0 3px color-mix(in oklch, var(--accent-blue) 46%, transparent);
-  animation: command-led 2.6s ease-in-out infinite;
+    0 0 10px var(--accent-blue),
+    inset 0 0 4px var(--accent-blue);
+  animation: command-led 2s ease-in-out infinite;
 }
 
 :root[data-theme="vercel"] .session-dot-indicator.unread,
@@ -171,7 +175,7 @@
 :root[data-theme="vercel"] .home-host-status.local {
   background: var(--accent-blue);
   border-color: var(--accent-blue);
-  box-shadow: 0 0 8px color-mix(in oklch, var(--accent-blue) 36%, transparent);
+  box-shadow: 0 0 10px var(--accent-blue);
 }
 
 :root[data-theme="vercel"] .main-header-left .main-header-title::before,
@@ -181,6 +185,9 @@
 :root[data-theme="vercel"] .modal-label,
 :root[data-theme="vercel"] .home-section-title {
   color: var(--text-heading);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 :root[data-theme="vercel"] .theme-menu-option {
@@ -189,56 +196,51 @@
 
 :root[data-theme="vercel"] .sidebar-metrics {
   background:
-    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 14%, transparent), transparent 42px),
-    linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 6%, transparent), transparent 56%),
-    repeating-linear-gradient(135deg, transparent 0 9px, color-mix(in oklch, white 1.8%, transparent) 9px 10px),
-    color-mix(in oklch, var(--bg-surface) 94%, black);
-  border-color: color-mix(in oklch, var(--accent-blue) 26%, var(--border-strong));
-  box-shadow:
-    inset 0 1px 0 var(--edge-hi),
-    inset 0 0 0 1px color-mix(in oklch, var(--accent-blue) 8%, transparent),
-    0 0 0 1px color-mix(in oklch, black 40%, transparent);
+    linear-gradient(135deg, color-mix(in oklch, var(--accent-blue) 10%, transparent), transparent 60px),
+    repeating-linear-gradient(135deg, transparent 0 12px, color-mix(in oklch, white 1%, transparent) 12px 13px),
+    var(--bg-surface);
+  border-color: color-mix(in oklch, var(--accent-blue) 30%, var(--border-strong));
 }
 
 :root[data-theme="vercel"] .sidebar-metrics.tui::before {
   content: '╭─ HOST TELEMETRY ─╮';
   color: var(--accent-blue);
-  text-shadow: 0 0 10px color-mix(in oklch, var(--accent-blue) 32%, transparent);
+  font-weight: 600;
+  text-shadow: 0 0 8px color-mix(in oklch, var(--accent-blue) 40%, transparent);
 }
 
 :root[data-theme="vercel"] .sidebar-metrics::after {
   content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   border: 0;
-  border-radius: 0;
   background:
-    linear-gradient(var(--accent-blue) 0 0) left top / 24px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) left top / 1px 24px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 28px 1px no-repeat,
-    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 28px no-repeat,
-    linear-gradient(var(--accent-warn) 0 0) right 9px top 9px / 18px 1px no-repeat;
-  opacity: 0.72;
+    linear-gradient(var(--accent-blue) 0 0) left top / 16px 1px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) left top / 1px 16px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right bottom / 16px 1px no-repeat,
+    linear-gradient(var(--accent-blue) 0 0) right bottom / 1px 16px no-repeat;
+  opacity: 0.8;
 }
 
 :root[data-theme="vercel"] .sidebar-metrics-row strong {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum' 1;
   color: var(--text-heading);
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'tnum' 1;
 }
 
 :root[data-theme="vercel"] .sidebar-metrics-bar {
-  background:
-    repeating-linear-gradient(90deg, color-mix(in oklch, var(--border-strong) 86%, black) 0 1px, transparent 1px 8px),
-    var(--bg);
-  border-color: color-mix(in oklch, var(--accent-blue) 28%, var(--border-strong));
+  height: 12px;
+  padding: 2px;
+  background: #050709;
+  border: 1px solid color-mix(in oklch, var(--accent-blue) 20%, var(--border));
   border-radius: 0;
 }
 
 :root[data-theme="vercel"] .sidebar-metrics-bar i,
 :root[data-theme="vercel"] .sidebar-metrics-bar.battery i {
-  background: linear-gradient(90deg, color-mix(in oklch, var(--text) 32%, var(--accent-blue)), var(--accent-blue));
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklch, white 22%, transparent),
-    0 0 8px color-mix(in oklch, var(--accent-blue) 24%, transparent);
+  background: linear-gradient(90deg, color-mix(in oklch, var(--accent-blue) 60%, #000), var(--accent-blue));
+  box-shadow: 0 0 8px color-mix(in oklch, var(--accent-blue) 50%, transparent);
 }
 
 :root[data-theme="vercel"] .launch-target-line::before,
@@ -285,9 +287,12 @@
 :root[data-theme="vercel"] .launch-inline-menu,
 :root[data-theme="vercel"] .session-menu-dropdown {
   border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklch, var(--accent-blue) 25%, var(--border-strong));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   box-shadow:
     inset 0 1px 0 var(--edge-hi),
-    0 26px 72px rgb(0 0 0 / 0.46);
+    0 20px 50px rgb(0 0 0 / 0.7);
 }
 
 :root[data-theme="vercel"] .home-host-card,
@@ -303,22 +308,23 @@
 :root[data-theme="vercel"] .session-peer-label,
 :root[data-theme="vercel"] .manage-projects-badge,
 :root[data-theme="vercel"] .session-menu-action-tag {
-  border-color: color-mix(in oklch, var(--accent-blue) 22%, var(--border));
+  border-color: color-mix(in oklch, var(--accent-blue) 25%, var(--border));
   color: var(--text-secondary);
+  background: color-mix(in oklch, var(--accent-blue) 4%, transparent);
 }
 
 .theme-menu-swatch.vercel {
   background:
-    repeating-linear-gradient(90deg, transparent 0 5px, rgb(125 231 255 / 0.18) 5px 6px),
-    linear-gradient(135deg, #000 0 50%, #7de7ff 50% 64%, #263940 64%);
+    repeating-linear-gradient(90deg, transparent 0 5px, rgb(0 229 255 / 0.15) 5px 6px),
+    linear-gradient(135deg, #0a0e12 0 50%, #00e5ff 50% 64%, #1e333d 64%);
 }
 
 @keyframes command-scanline {
   0%, 100% { background-position: 0 -160%, 0 0, 0 0; }
-  48%, 58% { background-position: 0 135%, 0 0, 0 0; }
+  50% { background-position: 0 140%, 0 0, 0 0; }
 }
 
 @keyframes command-led {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.58; }
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 4px var(--accent-blue)); }
+  50% { opacity: 0.4; filter: drop-shadow(0 0 1px var(--accent-blue)); }
 }

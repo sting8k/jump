@@ -4224,19 +4224,52 @@ select:focus-visible,
   background: repeating-linear-gradient(90deg, transparent 0 8px, oklch(0% 0 0 / 0.2) 8px 9px);
 }
 
-/* Menu positioning invariants: framing pseudo-elements must not pull menus back into flow. */
-.launch-inline-menu {
+/* Menu positioning invariants: framing pseudo-elements must not pull menus back into flow.
+   Theme files may style these surfaces with higher specificity, so keep the geometry invariant
+   at theme-scoped specificity too. */
+.launch-inline-menu,
+:root[data-theme] .launch-inline-menu {
   position: fixed;
   box-sizing: border-box;
 }
 
-.session-menu-dropdown {
+.session-menu-dropdown,
+:root[data-theme] .session-menu-dropdown {
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
   box-sizing: border-box;
   max-width: calc(100vw - 24px);
-  overflow: hidden;
+  max-height: min(72vh, calc(100dvh - var(--header-height) - 20px));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+@media (max-width: 640px) {
+  .session-menu-dropdown,
+  :root[data-theme] .session-menu-dropdown {
+    position: fixed;
+    top: calc(var(--header-height) + 8px);
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - var(--header-height) - 20px);
+  }
+}
+
+@media (pointer: coarse) {
+  .session-menu-dropdown,
+  :root[data-theme] .session-menu-dropdown {
+    position: fixed;
+    top: calc(var(--header-height) + 8px);
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-width: none;
+    max-height: calc(100dvh - var(--header-height) - 20px);
+  }
 }
 
 .session-menu-row,
