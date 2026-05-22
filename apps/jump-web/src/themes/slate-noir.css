@@ -1,0 +1,400 @@
+/* jump Web UI — Slate Noir Premium Workspace theme. */
+
+:root[data-theme="slate-noir"] {
+  /* Matte obsidian surfaces, platinum text, hairline steel borders. */
+  --bg-void: #090909;
+  --bg: #141414;
+  --bg-sidebar: #0f0f0f;
+  --bg-surface: #1a1a1b;
+  --bg-hover: #222224;
+  --bg-selected: #28282b;
+  --terminal-bg: #090909;
+
+  --text: #e3e3e6;
+  --text-secondary: #8e8e93;
+  --text-muted: #5f5f66;
+  --text-faint: #38383d;
+  --text-heading: #d4d4d8;
+  --text-bracket: #4a4a50;
+
+  --border: #14161d;
+  --border-strong: #222732;
+
+  --accent: #cbd5e1;
+  --accent-warn: #fb923c;
+  --accent-blue: #10b981;
+
+  --unread: #10b981;
+  --active: #10b981;
+
+  --status-error: #f43f5e;
+  --status-connected: #10b981;
+  --status-disconnected: #fb923c;
+
+  --font-mono: 'Fira Code', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-tech: 'Fira Code', 'Roboto Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 2px;
+  --radius-sm: 2px;
+  --radius-lg: 4px;
+}
+
+:root[data-theme="slate-noir"] .app-layout {
+  background:
+    linear-gradient(180deg, rgb(16 185 129 / 0.018), transparent 180px),
+    var(--bg-void);
+}
+
+:root[data-theme="slate-noir"] .main-panel {
+  background: var(--bg);
+  box-shadow: inset 1px 0 0 var(--border);
+}
+
+:root[data-theme="slate-noir"] .sidebar,
+:root[data-theme="slate-noir"] .main-header,
+:root[data-theme="slate-noir"] .sidebar-header,
+:root[data-theme="slate-noir"] .sidebar-footer,
+:root[data-theme="slate-noir"] .mobile-bottom-bar {
+  background: color-mix(in oklch, var(--bg-sidebar) 96%, black);
+  border-color: var(--border);
+}
+
+:root[data-theme="slate-noir"] .sidebar {
+  border-right-color: var(--border);
+}
+
+:root[data-theme="slate-noir"] .sidebar-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+}
+
+:root[data-theme="slate-noir"] .home {
+  position: relative;
+  background: var(--bg);
+}
+
+:root[data-theme="slate-noir"] .home::before {
+  content: 'SLATE NOIR WORKSPACE';
+  color: var(--text-muted);
+  font-family: var(--font-tech);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  margin-bottom: 18px;
+}
+
+:root[data-theme="slate-noir"] .home-host-card,
+:root[data-theme="slate-noir"] .home-project-card,
+:root[data-theme="slate-noir"] .home-workspace-add,
+:root[data-theme="slate-noir"] .sidebar-metrics,
+:root[data-theme="slate-noir"] .mp-section,
+:root[data-theme="slate-noir"] .modal-panel,
+:root[data-theme="slate-noir"] .launch-inline-menu,
+:root[data-theme="slate-noir"] .session-menu-dropdown {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.025);
+}
+
+:root[data-theme="slate-noir"] .modal-panel,
+:root[data-theme="slate-noir"] .launch-inline-menu,
+:root[data-theme="slate-noir"] .session-menu-dropdown {
+  border-color: var(--border-strong);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03);
+}
+
+:root[data-theme="slate-noir"] .home-host-card:hover,
+:root[data-theme="slate-noir"] .home-project-card:hover,
+:root[data-theme="slate-noir"] .home-workspace-suggestion:hover,
+:root[data-theme="slate-noir"] .mp-project-row:hover,
+:root[data-theme="slate-noir"] .mp-discovered-row:hover,
+:root[data-theme="slate-noir"] .session-item:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+:root[data-theme="slate-noir"] .session-item:hover {
+  background: color-mix(in oklch, var(--bg-hover) 86%, transparent);
+  border-color: var(--border);
+}
+
+:root[data-theme="slate-noir"] .home-host-card:hover,
+:root[data-theme="slate-noir"] .home-project-card:hover {
+  transform: none;
+}
+
+:root[data-theme="slate-noir"] .folder-header:hover {
+  background: var(--bg-hover);
+  border-left-color: color-mix(in oklch, var(--accent) 42%, transparent);
+}
+
+:root[data-theme="slate-noir"] .main-header-meta,
+:root[data-theme="slate-noir"] .session-meta {
+  color: var(--text-muted);
+}
+
+:root[data-theme="slate-noir"] .folder-name {
+  color: color-mix(in oklch, var(--text-secondary) 88%, var(--text));
+}
+
+:root[data-theme="slate-noir"] .folder-header:hover .folder-name {
+  color: color-mix(in oklch, var(--text-secondary) 72%, var(--text));
+}
+
+:root[data-theme="slate-noir"] .folder-name.current,
+:root[data-theme="slate-noir"] .session-item.selected .session-title {
+  color: var(--text);
+}
+
+:root[data-theme="slate-noir"] .session-item {
+  margin: 0 4px 1px;
+  padding: 5px 7px 5px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+
+:root[data-theme="slate-noir"] .session-item.selected {
+  background: color-mix(in oklch, var(--bg-selected) 76%, transparent);
+  border-color: var(--border);
+  box-shadow: inset 1px 0 0 color-mix(in oklch, var(--accent) 68%, transparent);
+}
+
+:root[data-theme="slate-noir"] .session-item.selected::before {
+  top: 6px;
+  bottom: 6px;
+  left: -1px;
+  width: 1px;
+  background: color-mix(in oklch, var(--accent) 78%, transparent);
+  border-radius: 99px;
+}
+
+:root[data-theme="slate-noir"] .session-title {
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+:root[data-theme="slate-noir"] .session-meta {
+  font-size: 11px;
+}
+
+:root[data-theme="slate-noir"] .session-meta,
+:root[data-theme="slate-noir"] .session-menu-value,
+:root[data-theme="slate-noir"] .sidebar-metrics-row strong,
+:root[data-theme="slate-noir"] .main-header-title {
+  font-variant-numeric: tabular-nums slashed-zero;
+  font-feature-settings: 'tnum' 1;
+}
+
+:root[data-theme="slate-noir"] .session-dot-indicator.working,
+:root[data-theme="slate-noir"] .session-dot.working,
+:root[data-theme="slate-noir"] .session-dot-indicator.active,
+:root[data-theme="slate-noir"] .session-dot-indicator.fading {
+  border-color: var(--accent-blue);
+  box-shadow: none;
+  animation: slate-noir-led 2.2s ease-in-out infinite;
+}
+
+:root[data-theme="slate-noir"] .session-dot-indicator.unread,
+:root[data-theme="slate-noir"] .session-dot.unread {
+  background: var(--accent-blue);
+  box-shadow: none;
+}
+
+:root[data-theme="slate-noir"] .home-host-status.connected,
+:root[data-theme="slate-noir"] .home-host-status.local {
+  background: var(--status-connected);
+  box-shadow: none;
+}
+
+:root[data-theme="slate-noir"] .home-section-title,
+:root[data-theme="slate-noir"] .mp-section-label,
+:root[data-theme="slate-noir"] .session-menu-section-title,
+:root[data-theme="slate-noir"] .launch-target-line,
+:root[data-theme="slate-noir"] .modal-label {
+  color: var(--text-heading);
+  font-family: var(--font-tech);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+:root[data-theme="slate-noir"] .sidebar-metrics {
+  --accent-warn: var(--accent-blue);
+}
+
+:root[data-theme="slate-noir"] .sidebar-metrics.tui::before {
+  content: 'HOST TELEMETRY';
+  color: color-mix(in oklch, var(--accent-blue) 82%, var(--text-secondary));
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+:root[data-theme="slate-noir"] .sidebar-metrics-row strong {
+  color: var(--text-secondary);
+}
+
+:root[data-theme="slate-noir"] .sidebar-metrics-bar {
+  height: 3px;
+  background: var(--border);
+  border: 0;
+  border-radius: 1px;
+}
+
+:root[data-theme="slate-noir"] .sidebar-metrics-bar i {
+  background: color-mix(in oklch, var(--accent-blue) 72%, var(--text-secondary));
+  border-radius: 1px;
+}
+
+:root[data-theme="slate-noir"] .sidebar-metrics-bar.battery i {
+  background: var(--accent-blue);
+  box-shadow: none;
+}
+
+:root[data-theme="slate-noir"] .sidebar-metrics .sidebar-metrics-label,
+:root[data-theme="slate-noir"] .sidebar-metrics-row span {
+  color: color-mix(in oklch, var(--text-secondary) 76%, var(--text-muted));
+}
+
+:root[data-theme="slate-noir"] .launch-btn,
+:root[data-theme="slate-noir"] .manage-projects-btn,
+:root[data-theme="slate-noir"] .home-launch-btn,
+:root[data-theme="slate-noir"] .session-menu-trigger,
+:root[data-theme="slate-noir"] .mobile-bottom-action,
+:root[data-theme="slate-noir"] .btn {
+  background: color-mix(in oklch, var(--bg-surface) 74%, black);
+  border-color: var(--border);
+  color: var(--text-secondary);
+}
+
+:root[data-theme="slate-noir"] .mobile-bottom-action {
+  color: color-mix(in oklch, var(--text) 82%, var(--text-secondary));
+  border-color: var(--border-strong);
+}
+
+:root[data-theme="slate-noir"] .launch-btn:hover,
+:root[data-theme="slate-noir"] .manage-projects-btn:hover,
+:root[data-theme="slate-noir"] .home-launch-btn:hover,
+:root[data-theme="slate-noir"] .session-menu-trigger:hover,
+:root[data-theme="slate-noir"] .mobile-bottom-action:active,
+:root[data-theme="slate-noir"] .mobile-bottom-action.armed,
+:root[data-theme="slate-noir"] .mobile-bottom-action.keyboard-btn.active,
+:root[data-theme="slate-noir"] .btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+:root[data-theme="slate-noir"] .home-workspace-input,
+:root[data-theme="slate-noir"] .mp-filter-input {
+  background: var(--bg-void);
+  border-color: var(--border);
+}
+
+:root[data-theme="slate-noir"] .home-workspace-input:focus,
+:root[data-theme="slate-noir"] .mp-filter-input:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 1px rgb(16 185 129 / 0.2);
+}
+
+:root[data-theme="slate-noir"] .session-menu-action:hover,
+:root[data-theme="slate-noir"] .launch-inline-item:hover,
+:root[data-theme="slate-noir"] .modal-close:hover,
+:root[data-theme="slate-noir"] .mp-docs-link:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+:root[data-theme="slate-noir"] .session-menu-action.stale,
+:root[data-theme="slate-noir"] .session-menu-action-tag,
+:root[data-theme="slate-noir"] .mp-active-badge {
+  color: var(--accent-warn);
+}
+
+:root[data-theme="slate-noir"] .session-menu-action-tag.ok,
+:root[data-theme="slate-noir"] .home-footer-update {
+  color: var(--status-connected);
+}
+
+:root[data-theme="slate-noir"] .session-menu-action-tag.error,
+:root[data-theme="slate-noir"] .mp-manual-error,
+:root[data-theme="slate-noir"] .home-workspace-error {
+  color: var(--status-error);
+}
+
+:root[data-theme="slate-noir"] .terminal-shell,
+:root[data-theme="slate-noir"] .terminal-container {
+  background: var(--terminal-bg);
+}
+
+:root[data-theme="slate-noir"] .terminal-container {
+  box-shadow: inset 0 0 0 1px var(--border);
+}
+
+:root[data-theme="slate-noir"] .terminal-resize-overlay,
+:root[data-theme="slate-noir"] .terminal-scroll-end {
+  background: color-mix(in oklch, var(--bg-surface) 82%, transparent);
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+
+:root[data-theme="slate-noir"] .terminal-resize-overlay:hover,
+:root[data-theme="slate-noir"] .terminal-scroll-end:hover,
+:root[data-theme="slate-noir"] .jump-to-bottom:hover,
+:root[data-theme="slate-noir"] .session-close-btn:hover,
+:root[data-theme="slate-noir"] .home-project-remove:hover,
+:root[data-theme="slate-noir"] .mp-remove-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--accent-warn);
+}
+
+:root[data-theme="slate-noir"] .theme-menu-option {
+  border-radius: var(--radius);
+}
+
+:root[data-theme="slate-noir"] .theme-menu-active-dot {
+  background: var(--accent-blue);
+  box-shadow: none;
+}
+
+:root[data-theme="slate-noir"] .mobile-bottom-action.send-btn,
+:root[data-theme="slate-noir"] .mobile-bottom-action.keyboard-btn,
+:root[data-theme="slate-noir"] .home-workspace-add-btn,
+:root[data-theme="slate-noir"] .btn-primary {
+  color: color-mix(in oklch, var(--accent-blue) 74%, var(--text));
+}
+
+:root[data-theme="slate-noir"] .home-workspace-add-btn,
+:root[data-theme="slate-noir"] .btn-primary {
+  background: color-mix(in oklch, var(--accent-blue) 7%, var(--bg-hover));
+  border-color: color-mix(in oklch, var(--accent-blue) 32%, var(--border));
+}
+
+.theme-menu-swatch.slate-noir {
+  background:
+    linear-gradient(135deg, #090909 0 46%, #e3e3e6 46% 58%, #10b981 58% 72%, #28282b 72%);
+}
+
+@keyframes slate-noir-led {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  50% { opacity: 0.72; filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme="slate-noir"] .session-dot-indicator,
+  :root[data-theme="slate-noir"] .session-dot,
+  :root[data-theme="slate-noir"] .home-host-card,
+  :root[data-theme="slate-noir"] .home-project-card {
+    animation: none !important;
+    transform: none !important;
+  }
+}

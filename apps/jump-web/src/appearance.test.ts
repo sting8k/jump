@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
   APPEARANCE_STORAGE_KEY,
-  ATELIER_THEME_ID,
   DEFAULT_APPEARANCE,
   DEFAULT_THEME_ID,
   HUD_THEME_ID,
+  SLATE_NOIR_THEME_ID,
   VERCEL_THEME_ID,
   normalizeAppearance,
   normalizeThemeId,
@@ -35,8 +35,8 @@ describe('appearance preferences', () => {
   it('normalizes snake_case and camelCase inputs', () => {
     expect(normalizeAppearance({ theme_id: 'spacetime' })).toEqual({ themeId: 'spacetime' })
     expect(normalizeAppearance({ themeId: VERCEL_THEME_ID })).toEqual({ themeId: VERCEL_THEME_ID })
-    expect(normalizeAppearance({ theme_id: ATELIER_THEME_ID })).toEqual({ themeId: ATELIER_THEME_ID })
     expect(normalizeAppearance({ theme_id: HUD_THEME_ID })).toEqual({ themeId: HUD_THEME_ID })
+    expect(normalizeAppearance({ theme_id: SLATE_NOIR_THEME_ID })).toEqual({ themeId: SLATE_NOIR_THEME_ID })
   })
 
   it('falls back for unknown or unsafe theme ids', () => {

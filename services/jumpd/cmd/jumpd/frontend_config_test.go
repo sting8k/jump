@@ -30,7 +30,7 @@ func TestFrontendPreferencesPatchSavesAppearance(t *testing.T) {
 	registerFrontendConfigRoutes(mux, webprefs.NewManager(dir))
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPatch, "/v1/frontend-preferences", strings.NewReader(`{"appearance":{"theme_id":"atelier"}}`))
+	req := httptest.NewRequest(http.MethodPatch, "/v1/frontend-preferences", strings.NewReader(`{"appearance":{"theme_id":"slate-noir"}}`))
 	mux.ServeHTTP(rec, req)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%q", rec.Code, rec.Body.String())
@@ -40,8 +40,8 @@ func TestFrontendPreferencesPatchSavesAppearance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.Appearance.ThemeID != webprefs.AtelierThemeID {
-		t.Fatalf("theme_id = %q, want %q", state.Appearance.ThemeID, webprefs.AtelierThemeID)
+	if state.Appearance.ThemeID != webprefs.SlateNoirThemeID {
+		t.Fatalf("theme_id = %q, want %q", state.Appearance.ThemeID, webprefs.SlateNoirThemeID)
 	}
 }
 

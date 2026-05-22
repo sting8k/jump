@@ -4,8 +4,8 @@
 @import './themes/default.css';
 @import './themes/spacetime.css';
 @import './themes/vercel.css';
-@import './themes/atelier.css';
 @import './themes/hud.css';
+@import './themes/slate-noir.css';
 
 code {
   font-family: var(--font-mono);
