@@ -86,6 +86,30 @@
   text-shadow: none;
 }
 
+:root[data-theme="zerobyte"] .sidebar-metrics-bar {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 7px, var(--bg-surface) 7px 8px),
+    var(--bg);
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+:root[data-theme="zerobyte"] .sidebar-metrics-bar i {
+  background: var(--accent);
+  box-shadow: none;
+}
+
+:root[data-theme="zerobyte"] .sidebar-metrics-bar.battery i {
+  background: var(--accent-warn);
+}
+
+:root[data-theme="zerobyte"] .sidebar-metrics-bar i::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, transparent 0 7px, var(--bg-surface) 7px 8px);
+}
+
 
 .theme-menu-swatch.zerobyte {
   background: #0b0b0b;
