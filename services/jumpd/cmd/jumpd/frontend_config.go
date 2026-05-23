@@ -35,21 +35,21 @@ func registerFrontendConfigRoutes(mux *http.ServeMux, prefsMgr *webprefs.Manager
 				"theme":         theme,
 				"settings":      settings,
 				"appearance":    prefs.Appearance,
-				"notifications": prefs.Notifications,
+				"notifications": prefs.Notifications.Public(),
 			},
 		})
 	})
 
 	mux.HandleFunc("PATCH /v1/frontend-preferences", func(w http.ResponseWriter, r *http.Request) {
-		body, err := io.ReadAll(io.LimitReader(r.Body, 2048))
+		body, err := io.ReadAll(io.LimitReader(r.Body, 4096))
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "bad_request", "read error")
 			return
 		}
 
 		var req struct {
-			Appearance    *webprefs.Appearance    `json:"appearance"`
-			Notifications *webprefs.Notifications `json:"notifications"`
+			Appearance    *webprefs.Appearance         `json:"appearance"`
+			Notifications *webprefs.NotificationsPatch `json:"notifications"`
 		}
 		if err := json.Unmarshal(body, &req); err != nil {
 			writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON")
@@ -62,7 +62,7 @@ func registerFrontendConfigRoutes(mux *http.ServeMux, prefsMgr *webprefs.Manager
 
 		prefs, err := prefsMgr.Update(req.Appearance, req.Notifications)
 		if err != nil {
-			if errors.Is(err, webprefs.ErrInvalidThemeID) {
+			if errors.Is(err, webprefs.ErrInvalidThemeID) || errors.Is(err, webprefs.ErrInvalidNtfy) {
 				writeError(w, http.StatusBadRequest, "validation_error", err.Error())
 				return
 			}
@@ -74,7 +74,7 @@ func registerFrontendConfigRoutes(mux *http.ServeMux, prefsMgr *webprefs.Manager
 			"ok": true,
 			"data": map[string]any{
 				"appearance":    prefs.Appearance,
-				"notifications": prefs.Notifications,
+				"notifications": prefs.Notifications.Public(),
 			},
 		})
 	})

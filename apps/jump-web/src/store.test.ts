@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { sessions, sessionsLoaded, projects, upsertSession, removeSession, markSessionRead, handleActivity, isSessionActive, isSessionFading, activityMap, activityGeneration, sessionStaleness, peers, peerAppearance, urlPath, selectedId, navigateToSession, setNavigate, launchSession, removeProject, health, startHealthRefresh, HEALTH_REFRESH_MS, HEALTH_REFRESH_SETTLE_MS, appearance, setThemeId, notificationPreferences, setNotificationPreferences, initStore } from './store'
 import { APPEARANCE_STORAGE_KEY } from './appearance'
+import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications'
 import type { Session } from './types'
 import type { ProjectItem } from './types'
 
@@ -222,22 +223,41 @@ describe('appearance preferences', () => {
 
 describe('notification preferences', () => {
   beforeEach(() => {
-    notificationPreferences.value = { inApp: false, os: false }
+    notificationPreferences.value = DEFAULT_NOTIFICATION_PREFERENCES
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
   })
   afterEach(() => { vi.restoreAllMocks() })
 
   it('defaults notification channels off', () => {
-    expect(notificationPreferences.value).toEqual({ inApp: false, os: false })
+    expect(notificationPreferences.value).toEqual(DEFAULT_NOTIFICATION_PREFERENCES)
   })
 
   it('saves notification preferences to the server', async () => {
-    await setNotificationPreferences({ inApp: true, os: false })
+    await setNotificationPreferences({
+      ...DEFAULT_NOTIFICATION_PREFERENCES,
+      inApp: true,
+      ntfy: { ...DEFAULT_NOTIFICATION_PREFERENCES.ntfy, topicId: 'jump-topic', enabled: true },
+    })
 
-    expect(notificationPreferences.value).toEqual({ inApp: true, os: false })
+    expect(notificationPreferences.value).toEqual({
+      ...DEFAULT_NOTIFICATION_PREFERENCES,
+      inApp: true,
+      ntfy: { ...DEFAULT_NOTIFICATION_PREFERENCES.ntfy, topicId: 'jump-topic', enabled: true },
+    })
     expect(fetch).toHaveBeenCalledWith('/v1/frontend-preferences', expect.objectContaining({
       method: 'PATCH',
-      body: JSON.stringify({ notifications: { in_app: true, os: false } }),
+      body: JSON.stringify({
+        notifications: {
+          in_app: true,
+          os: false,
+          ntfy: {
+            enabled: true,
+            server_url: 'https://ntfy.sh',
+            topic_id: 'jump-topic',
+            send_details: false,
+          },
+        },
+      }),
     }))
   })
 })

@@ -86,12 +86,12 @@ body {
 
 .notification-toasts {
   position: fixed;
-  top: 12px;
-  right: 12px;
-  width: min(360px, calc(100vw - 24px));
+  top: 10px;
+  right: 10px;
+  width: min(300px, calc(100vw - 20px));
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   z-index: 140;
   pointer-events: none;
 }
@@ -101,9 +101,9 @@ body {
   align-items: stretch;
   overflow: hidden;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   background: color-mix(in oklch, var(--bg-surface) 92%, transparent);
-  box-shadow: 0 10px 30px color-mix(in oklch, var(--bg-void) 45%, transparent);
+  box-shadow: 0 6px 18px color-mix(in oklch, var(--bg-void) 35%, transparent);
   pointer-events: auto;
 }
 
@@ -112,10 +112,10 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  padding: 10px 12px;
+  gap: 2px;
+  padding: 7px 9px;
   border: 0;
-  border-left: 3px solid var(--unread);
+  border-left: 2px solid var(--unread);
   background: transparent;
   color: inherit;
   text-align: left;
@@ -129,6 +129,7 @@ body {
 .notification-toast-title {
   overflow: hidden;
   color: var(--text);
+  font-size: 12px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -137,13 +138,13 @@ body {
 .notification-toast-body {
   overflow: hidden;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: 10px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .notification-toast-dismiss {
-  width: 34px;
+  width: 28px;
   border: 0;
   border-left: 1px solid var(--border);
   background: transparent;
@@ -935,6 +936,60 @@ body {
   flex-shrink: 0;
   accent-color: var(--accent);
 }
+.settings-field-row {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-field-row > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.settings-field-row small {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.settings-field-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+}
+
+.settings-inline-field {
+  display: flex;
+  gap: 6px;
+}
+
+.settings-inline-field input {
+  flex: 1;
+}
+
+.settings-inline-field button {
+  flex-shrink: 0;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.settings-inline-field button:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 
 
 /* Section layout */

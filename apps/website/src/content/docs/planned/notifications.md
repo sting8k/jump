@@ -20,13 +20,15 @@ that show what the daemon tells them to.
 
 ### Settings
 
-Sidebar dots and the mobile hamburger badge are state indicators, not notification channels. They remain always on because they mirror session truth (`working`, `error`, `unread`, and transient `activity`). Notification settings only gate delivery channels: in-app toasts and OS notifications.
+Sidebar dots and the mobile hamburger badge are state indicators, not notification channels. They remain always on because they mirror session truth (`working`, `error`, `unread`, and transient `activity`). Notification settings only gate delivery channels: in-app toasts, browser OS notifications, and ntfy push.
 
 Session notification channels are user-controlled and default off:
 - Sidebar dots and tab title badges remain always-on session state.
 - New activity can repulse an unread sidebar dot, but it does not bypass notification settings.
 - In-app toasts require the in-app notification setting.
 - OS notifications require both the OS notification setting and browser permission.
+- ntfy push requires the ntfy setting, server URL, and topic ID. Token is optional for authenticated/self-hosted servers.
+- ntfy messages default to compact privacy-safe text: `[workspace] session finished` or `[workspace] new output`.
 
 ### Trigger conditions
 
@@ -35,7 +37,7 @@ Session notification channels are user-controlled and default off:
 | **Session finished** | `status.working` true → false on a live session |
 | **New output** | `unread` false → true |
 
-Both are skipped when a focused client is viewing the session. If jump is focused elsewhere, the daemon sends an in-app toast instead of escalating to an OS notification.
+All delivery channels are skipped when a focused client is viewing the session. If jump is focused elsewhere, the daemon sends an in-app toast instead of escalating to background channels. When jump is not focused, browser OS and ntfy delivery share the normal 5-second grace period.
 
 ### Escalation model
 
@@ -43,7 +45,8 @@ Both are skipped when a focused client is viewing the session. If jump is focuse
 2. **Tab title badge** — `(1) jump` when sessions have unread output
 3. **In-app toast** — when enabled and jump is focused but the event belongs to another session
 4. **OS notification** — when enabled, after a 5-second grace period while jump is not focused; cancelled if user focuses jump within that window
-5. **Cross-device routing** — if the active device is idle (>2 min since last interaction), route to the most recently used other device
+5. **ntfy push** — when enabled, after the same grace period; sent by the daemon and does not require a browser tab
+6. **Cross-device routing** — if the active device is idle (>2 min since last interaction), route to the most recently used other device
 
 ### Coalescing
 
@@ -54,12 +57,11 @@ instead of individual notifications. Clicking the summary opens the home view.
 ## Implementation
 
 - `internal/presence` — presence table tracking connected clients
-- `internal/notify` — notification router with grace period, coalescing, device routing
+- `internal/notify` — notification router with grace period, coalescing, device routing, and ntfy publishing
 - `apps/jump-web/src/presence.ts` — presence WebSocket client with auto-reconnect
-- Permission UI: "Enable notifications" button in sidebar footer
+- Settings UI: sidebar-top gear controls in-app, OS, and ntfy channels
 
 ## Open items
 
-- Background push when no browser tab is open (see [Mobile Notifications](/planned/mobile-notifications))
 - Notification sounds (optional)
 - Per-session notification preferences (mute noisy sessions)

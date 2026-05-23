@@ -153,8 +153,17 @@ export function setThemeId(themeId: string): Promise<void> {
 }
 export function setNotificationPreferences(next: NotificationPreferences): Promise<void> {
   const normalized = normalizeNotificationPreferences(next)
-  notificationPreferences.value = normalized
-  return saveFrontendPreferences({ notifications: normalized }).catch(err => {
+  const saved = normalized
+  notificationPreferences.value = {
+    ...normalized,
+    ntfy: {
+      ...normalized.ntfy,
+      token: undefined,
+      clearToken: undefined,
+      tokenConfigured: normalized.ntfy.clearToken ? false : (normalized.ntfy.token ? true : normalized.ntfy.tokenConfigured),
+    },
+  }
+  return saveFrontendPreferences({ notifications: saved }).catch(err => {
     console.error('Failed to save notification preferences:', err)
   })
 }

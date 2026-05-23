@@ -536,6 +536,13 @@ func serve(stderr io.Writer) int {
 	// Start background update checker
 	updateChecker := update.New(version)
 
+	// State directory for persistent files (projects.json, auth-token, web preferences, etc).
+	stateDir := paths.StateDir()
+
+	// Web preferences are jumpd-managed UI state, separate from user-editable
+	// settings.jsonc/theme.jsonc terminal configuration.
+	webPrefsMgr := webprefs.NewManager(stateDir)
+
 	// ── Presence + Notification router ──
 
 	notifRouter := (*notify.Router)(nil) // assigned after presence table
@@ -551,7 +558,23 @@ func serve(stderr io.Writer) int {
 			}
 		},
 	})
-	notifRouter = notify.New(presenceTable, sessions, notify.DefaultConfig())
+	notifConfig := notify.DefaultConfig()
+	notifConfig.NtfyProvider = func() notify.NtfyConfig {
+		prefs, err := webPrefsMgr.Load()
+		if err != nil {
+			log.Printf("notify: ntfy preferences unavailable: %v", err)
+			return notify.NtfyConfig{}
+		}
+		ntfy := prefs.Notifications.Ntfy
+		return notify.NtfyConfig{
+			Enabled:     ntfy.Enabled,
+			ServerURL:   ntfy.ServerURL,
+			TopicID:     ntfy.TopicID,
+			Token:       ntfy.Token,
+			SendDetails: ntfy.SendDetails,
+		}
+	}
+	notifRouter = notify.New(presenceTable, sessions, notifConfig)
 	notifCtx, notifCancel := context.WithCancel(context.Background())
 	go notifRouter.Run(notifCtx)
 	defer notifCancel()
@@ -567,9 +590,6 @@ func serve(stderr io.Writer) int {
 	var tcpAddr string
 	var authToken string
 
-	// State directory for persistent files (projects.json, auth-token, etc).
-	stateDir := paths.StateDir()
-
 	// Project manager handles concurrent access to projects.json and
 	// auto-assignment of sessions to projects.
 	projectMgr := projects.NewManager(stateDir)
@@ -577,10 +597,6 @@ func serve(stderr io.Writer) int {
 		sessions.Broadcast(store.Event{Type: "projects-update"})
 	}
 	projectMgr.SeedIfEmpty()
-
-	// Web preferences are jumpd-managed UI state, separate from user-editable
-	// settings.jsonc/theme.jsonc terminal configuration.
-	webPrefsMgr := webprefs.NewManager(stateDir)
 
 	// Keep project membership arrays in sync with scanner-driven removals
 	// such as stale ephemeral cleanup, 24-hour dead-session TTL pruning, and invalid timestamp cleanup.

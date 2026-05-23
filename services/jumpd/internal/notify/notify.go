@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"sync"
 	"time"
 
@@ -21,6 +22,8 @@ import (
 type Config struct {
 	GracePeriod   time.Duration // delay before firing (default 5s); also serves as the coalescing window
 	IdleThreshold time.Duration // client idle threshold for cross-device routing (default 2m)
+	NtfyProvider  func() NtfyConfig
+	HTTPClient    *http.Client
 }
 
 // DefaultConfig returns sensible defaults.
@@ -55,6 +58,7 @@ type pendingNotif struct {
 	title     string
 	body      string
 	timer     *time.Timer
+	workspace string
 	notifID   string
 }
 
@@ -161,7 +165,7 @@ func (r *Router) handleEvent(ev store.Event) {
 	// Transition: working → idle on a live session
 	if prev.Working && !cur.Working && cur.Alive {
 		body := formatFinishedBody(sess)
-		r.scheduleNotification(sess.ID, "finished", sess.Title, body)
+		r.scheduleNotification(sess, "finished", sess.Title, body)
 	}
 
 	// Transition: unread flipped on
@@ -170,7 +174,7 @@ func (r *Router) handleEvent(ev store.Event) {
 		if sess.Status != nil && sess.Status.Label != "" {
 			body = sess.Status.Label
 		}
-		r.scheduleNotification(sess.ID, "unread", sess.Title, body)
+		r.scheduleNotification(sess, "unread", sess.Title, body)
 	}
 }
 
@@ -199,7 +203,8 @@ func formatDuration(d time.Duration) string {
 	return fmt.Sprintf("%dh %dm", h, m)
 }
 
-func (r *Router) scheduleNotification(sessionID, notifType, title, body string) {
+func (r *Router) scheduleNotification(sess store.Session, notifType, title, body string) {
+	sessionID := sess.ID
 	// If the user is already looking at this session, the regular UI state is
 	// enough. If jump is focused elsewhere, route to an in-app toast instead of
 	// dropping the event or escalating to an OS notification.
@@ -231,6 +236,7 @@ func (r *Router) scheduleNotification(sessionID, notifType, title, body string) 
 		notifType: notifType,
 		title:     title,
 		body:      body,
+		workspace: workspaceLabel(sess),
 		notifID:   notifID,
 	}
 
@@ -294,14 +300,14 @@ func (r *Router) firePending(sessionID string) {
 
 	// Coalesce: if 3+ events are pending simultaneously, send a summary.
 	if pendingCount >= 3 {
-		count := 1
+		events := []*pendingNotif{p}
 		for sid, other := range r.pending {
 			other.timer.Stop()
 			delete(r.pending, sid)
-			count++
+			events = append(events, other)
 		}
 		r.mu.Unlock()
-		r.fireCoalesced(count)
+		r.fireCoalesced(events)
 		return
 	}
 	r.mu.Unlock()
@@ -313,7 +319,8 @@ func (r *Router) firePending(sessionID string) {
 
 	target := r.presence.BestNotifyTarget(r.config.IdleThreshold)
 	if target == nil {
-		log.Printf("notify: no target for session %s (no client with granted permission)", sessionID)
+		log.Printf("notify: no browser target for session %s (no client with granted permission)", sessionID)
+		r.publishNtfy(p)
 		return
 	}
 
@@ -333,6 +340,7 @@ func (r *Router) firePending(sessionID string) {
 
 	sendJSON(target.Conn, msg)
 	log.Printf("notify: sent %s to client %s for session %s (%s)", p.notifID, target.ID, sessionID, p.notifType)
+	r.publishNtfy(p)
 
 	// Auto-expire the active entry after 5 minutes so dismissed-without-click
 	// notifications don't leak memory in the active map.
@@ -343,10 +351,12 @@ func (r *Router) firePending(sessionID string) {
 	})
 }
 
-func (r *Router) fireCoalesced(count int) {
+func (r *Router) fireCoalesced(events []*pendingNotif) {
+	count := len(events)
 	target := r.presence.BestNotifyTarget(r.config.IdleThreshold)
 	if target == nil {
-		log.Printf("notify: no target for coalesced notification (%d sessions)", count)
+		log.Printf("notify: no browser target for coalesced notification (%d sessions)", count)
+		r.publishCoalescedNtfy(events)
 		return
 	}
 
@@ -372,6 +382,7 @@ func (r *Router) fireCoalesced(count int) {
 
 	sendJSON(target.Conn, msg)
 	log.Printf("notify: sent coalesced notification (%d sessions) to client %s", count, target.ID)
+	r.publishCoalescedNtfy(events)
 
 	time.AfterFunc(5*time.Minute, func() {
 		r.mu.Lock()

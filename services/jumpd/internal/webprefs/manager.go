@@ -42,7 +42,7 @@ func (m *Manager) UpdateAppearance(appearance Appearance) (*State, error) {
 	}
 	return state, nil
 }
-func (m *Manager) Update(appearance *Appearance, notifications *Notifications) (*State, error) {
+func (m *Manager) Update(appearance *Appearance, notifications *NotificationsPatch) (*State, error) {
 	var normalizedAppearance *Appearance
 	if appearance != nil {
 		normalized, err := NormalizeAppearance(*appearance)
@@ -66,7 +66,11 @@ func (m *Manager) Update(appearance *Appearance, notifications *Notifications) (
 		state.Appearance = *normalizedAppearance
 	}
 	if notifications != nil {
-		state.Notifications = *notifications
+		updated, err := notifications.Apply(state.Notifications)
+		if err != nil {
+			return nil, err
+		}
+		state.Notifications = updated
 	}
 	if err := state.Save(m.stateDir); err != nil {
 		return nil, err

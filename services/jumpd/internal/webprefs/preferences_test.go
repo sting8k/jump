@@ -21,6 +21,9 @@ func TestLoadMissingFileReturnsDefault(t *testing.T) {
 	if state.Notifications.InApp || state.Notifications.OS {
 		t.Fatalf("notifications = %+v, want all off", state.Notifications)
 	}
+	if state.Notifications.Ntfy.ServerURL != DefaultNtfyServerURL {
+		t.Fatalf("ntfy server_url = %q, want %q", state.Notifications.Ntfy.ServerURL, DefaultNtfyServerURL)
+	}
 }
 
 func TestSaveAndLoad(t *testing.T) {
@@ -47,6 +50,9 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if loaded.Notifications.InApp || loaded.Notifications.OS {
 		t.Fatalf("notifications = %+v, want all off", loaded.Notifications)
+	}
+	if loaded.Notifications.Ntfy.ServerURL != DefaultNtfyServerURL {
+		t.Fatalf("ntfy server_url = %q, want %q", loaded.Notifications.Ntfy.ServerURL, DefaultNtfyServerURL)
 	}
 }
 
@@ -111,22 +117,64 @@ func TestManagerUpdateAppearanceRecoversCorruptState(t *testing.T) {
 
 func TestManagerUpdateSavesNotifications(t *testing.T) {
 	dir := t.TempDir()
-	notifications := Notifications{InApp: true, OS: true}
+	inApp := true
+	os := true
+	enabled := true
+	topic := "jump-a8f3k2m9"
+	token := "tk_secret"
+	notifications := NotificationsPatch{
+		InApp: &inApp,
+		OS:    &os,
+		Ntfy: &NtfyPatch{
+			Enabled: &enabled,
+			TopicID: &topic,
+			Token:   &token,
+		},
+	}
 
 	state, err := NewManager(dir).Update(nil, &notifications)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !state.Notifications.InApp || !state.Notifications.OS {
-		t.Fatalf("notifications = %+v, want both on", state.Notifications)
+	if !state.Notifications.InApp || !state.Notifications.OS || !state.Notifications.Ntfy.Enabled {
+		t.Fatalf("notifications = %+v, want channels on", state.Notifications)
+	}
+	if state.Notifications.Ntfy.TopicID != topic || state.Notifications.Ntfy.Token != token {
+		t.Fatalf("ntfy = %+v, want topic/token saved", state.Notifications.Ntfy)
 	}
 
 	loaded, err := Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !loaded.Notifications.InApp || !loaded.Notifications.OS {
-		t.Fatalf("loaded notifications = %+v, want both on", loaded.Notifications)
+	if !loaded.Notifications.InApp || !loaded.Notifications.OS || !loaded.Notifications.Ntfy.Enabled {
+		t.Fatalf("loaded notifications = %+v, want channels on", loaded.Notifications)
+	}
+	if public := loaded.Notifications.Public(); !public.Ntfy.TokenConfigured {
+		t.Fatalf("public ntfy = %+v, want token_configured", public.Ntfy)
+	}
+}
+
+func TestNtfyRequiresTopicWhenEnabled(t *testing.T) {
+	enabled := true
+	patch := NotificationsPatch{Ntfy: &NtfyPatch{Enabled: &enabled}}
+	_, err := patch.Apply(DefaultState().Notifications)
+	if !errors.Is(err, ErrInvalidNtfy) {
+		t.Fatalf("err = %v, want ErrInvalidNtfy", err)
+	}
+}
+
+func TestNtfyTokenPatchKeepsExistingWhenOmitted(t *testing.T) {
+	base := DefaultState().Notifications
+	base.Ntfy.Token = "tk_existing"
+	topic := "jump-topic"
+	patch := NotificationsPatch{Ntfy: &NtfyPatch{TopicID: &topic}}
+	updated, err := patch.Apply(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if updated.Ntfy.Token != "tk_existing" {
+		t.Fatalf("token = %q, want existing", updated.Ntfy.Token)
 	}
 }
 
