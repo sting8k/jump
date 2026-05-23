@@ -32,9 +32,10 @@ func registerFrontendConfigRoutes(mux *http.ServeMux, prefsMgr *webprefs.Manager
 		writeJSON(w, map[string]any{
 			"ok": true,
 			"data": map[string]any{
-				"theme":      theme,
-				"settings":   settings,
-				"appearance": prefs.Appearance,
+				"theme":         theme,
+				"settings":      settings,
+				"appearance":    prefs.Appearance,
+				"notifications": prefs.Notifications,
 			},
 		})
 	})
@@ -47,18 +48,19 @@ func registerFrontendConfigRoutes(mux *http.ServeMux, prefsMgr *webprefs.Manager
 		}
 
 		var req struct {
-			Appearance *webprefs.Appearance `json:"appearance"`
+			Appearance    *webprefs.Appearance    `json:"appearance"`
+			Notifications *webprefs.Notifications `json:"notifications"`
 		}
 		if err := json.Unmarshal(body, &req); err != nil {
 			writeError(w, http.StatusBadRequest, "bad_request", "invalid JSON")
 			return
 		}
-		if req.Appearance == nil {
-			writeError(w, http.StatusBadRequest, "bad_request", "appearance required")
+		if req.Appearance == nil && req.Notifications == nil {
+			writeError(w, http.StatusBadRequest, "bad_request", "preference patch required")
 			return
 		}
 
-		prefs, err := prefsMgr.UpdateAppearance(*req.Appearance)
+		prefs, err := prefsMgr.Update(req.Appearance, req.Notifications)
 		if err != nil {
 			if errors.Is(err, webprefs.ErrInvalidThemeID) {
 				writeError(w, http.StatusBadRequest, "validation_error", err.Error())
@@ -71,7 +73,8 @@ func registerFrontendConfigRoutes(mux *http.ServeMux, prefsMgr *webprefs.Manager
 		writeJSON(w, map[string]any{
 			"ok": true,
 			"data": map[string]any{
-				"appearance": prefs.Appearance,
+				"appearance":    prefs.Appearance,
+				"notifications": prefs.Notifications,
 			},
 		})
 	})

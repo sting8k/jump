@@ -14,6 +14,7 @@ import type { NotifyMessage } from './presence'
 
 import type { Session } from './types'
 import { ManageProjectsModal } from './manage-projects'
+import { SettingsModal } from './settings-modal'
 import { ProjectHub } from './project-hub'
 import { Home } from './home'
 import { LaunchButton } from './launcher'
@@ -638,6 +639,7 @@ function App() {
   // ── Local UI state (not shared, belongs to App) ──
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [manageProjectsOpen, setManageProjectsOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [ctrlArmed, setCtrlArmed] = useState(false)
   const [altArmed, setAltArmed] = useState(false)
   const [keyboardActive, setKeyboardActive] = useState(false)
@@ -760,6 +762,7 @@ function App() {
         resumingId={resumingId}
         onCloseSession={handleCloseSession}
         onManageProjects={() => { handleHideKeyboard(); setSidebarOpen(false); setManageProjectsOpen(true) }}
+        onOpenSettings={() => { handleHideKeyboard(); setSidebarOpen(false); setSettingsOpen(true) }}
         open={sidebarOpen}
         onClose={() => { handleHideKeyboard(); setSidebarOpen(false) }}
         onInteract={handleHideKeyboard}
@@ -768,6 +771,13 @@ function App() {
       <ManageProjectsModal
         open={manageProjectsOpen}
         onClose={() => setManageProjectsOpen(false)}
+      />
+
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        notifPermission={presenceState.notifPermission}
+        requestNotifPermission={presenceState.requestNotifPermission}
       />
 
       <NotificationToasts

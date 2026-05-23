@@ -18,6 +18,9 @@ func TestLoadMissingFileReturnsDefault(t *testing.T) {
 	if state.Appearance.ThemeID != DefaultThemeID {
 		t.Fatalf("theme_id = %q, want %q", state.Appearance.ThemeID, DefaultThemeID)
 	}
+	if state.Notifications.InApp || state.Notifications.OS {
+		t.Fatalf("notifications = %+v, want all off", state.Notifications)
+	}
 }
 
 func TestSaveAndLoad(t *testing.T) {
@@ -41,6 +44,9 @@ func TestSaveAndLoad(t *testing.T) {
 	}
 	if loaded.Appearance.ThemeID != DefaultThemeID {
 		t.Fatalf("theme_id = %q, want %q", loaded.Appearance.ThemeID, DefaultThemeID)
+	}
+	if loaded.Notifications.InApp || loaded.Notifications.OS {
+		t.Fatalf("notifications = %+v, want all off", loaded.Notifications)
 	}
 }
 
@@ -103,10 +109,32 @@ func TestManagerUpdateAppearanceRecoversCorruptState(t *testing.T) {
 	}
 }
 
+func TestManagerUpdateSavesNotifications(t *testing.T) {
+	dir := t.TempDir()
+	notifications := Notifications{InApp: true, OS: true}
+
+	state, err := NewManager(dir).Update(nil, &notifications)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !state.Notifications.InApp || !state.Notifications.OS {
+		t.Fatalf("notifications = %+v, want both on", state.Notifications)
+	}
+
+	loaded, err := Load(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !loaded.Notifications.InApp || !loaded.Notifications.OS {
+		t.Fatalf("loaded notifications = %+v, want both on", loaded.Notifications)
+	}
+}
+
 func TestManagerUpdateAppearanceSavesAtomically(t *testing.T) {
 	dir := t.TempDir()
 	manager := NewManager(dir)
-	state, err := manager.UpdateAppearance(Appearance{ThemeID: SpacetimeThemeID})
+	appearance := Appearance{ThemeID: SpacetimeThemeID}
+	state, err := manager.Update(&appearance, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

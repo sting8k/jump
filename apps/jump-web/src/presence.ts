@@ -44,6 +44,7 @@ export interface PresenceConnection {
 export function connectPresence(options: {
   onNotify: (msg: NotifyMessage) => void
   onCancel: (msg: CancelMessage) => void
+  getNotificationPermission?: () => string
 }): PresenceConnection {
   let ws: WebSocket | null = null
   let closed = false
@@ -72,7 +73,8 @@ export function connectPresence(options: {
       backoff = 1000
       // Read permission fresh on each connect — it may have changed since
       // the previous connection (e.g. user granted permission, then WS reconnected).
-      const perm = 'Notification' in window ? Notification.permission : 'unavailable'
+      const perm = options.getNotificationPermission?.()
+        ?? ('Notification' in window ? Notification.permission : 'unavailable')
       socket.send(JSON.stringify({
         type: 'client-hello',
         device_type: deviceType,

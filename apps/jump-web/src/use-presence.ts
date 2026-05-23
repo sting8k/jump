@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { connectPresence } from './presence'
 import type { NotifyMessage, CancelMessage } from './presence'
-import { selectedId, sessions, navigateToSession, navigate } from './store'
+import { selectedId, sessions, navigateToSession, navigate, notificationPreferences } from './store'
 
 const USE_MOCK = import.meta.env.VITE_MOCK === '1' || location.search.includes('mock')
 
@@ -17,7 +17,7 @@ type NotifPermission = 'default' | 'granted' | 'denied' | 'unavailable'
 
 interface UsePresenceResult {
   notifPermission: NotifPermission
-  requestNotifPermission: () => void
+  requestNotifPermission: () => Promise<NotifPermission>
   inAppNotifications: NotifyMessage[]
   activateInAppNotification: (msg: NotifyMessage) => void
   dismissInAppNotification: (id: string) => void
@@ -33,6 +33,12 @@ export function usePresence(): UsePresenceResult {
   const notifPermission: NotifPermission = USE_MOCK
     ? 'granted'
     : ('Notification' in window ? Notification.permission : 'unavailable')
+  const notificationsPrefs = notificationPreferences.value
+
+  const effectiveNotificationPermission = useCallback((): string => {
+    if (!notificationsPrefs.os) return 'disabled'
+    return 'Notification' in window ? Notification.permission : 'unavailable'
+  }, [notificationsPrefs.os])
 
   const ackNotification = useCallback((id: string, action: 'clicked' | 'closed') => {
     presenceRef.current?.sendNotificationAck(id, action)
@@ -61,6 +67,10 @@ export function usePresence(): UsePresenceResult {
   // Show a notification when the daemon tells us to.
   const handleNotify = useCallback((msg: NotifyMessage) => {
     if (msg.channel === 'in_app') {
+      if (!notificationPreferences.value.inApp) {
+        ackNotification(msg.id, 'closed')
+        return
+      }
       setInAppNotifications(prev => [
         ...prev.filter(n => n.id !== msg.id && n.tag !== msg.tag),
         msg,
@@ -75,7 +85,10 @@ export function usePresence(): UsePresenceResult {
       return
     }
 
-    if (!('Notification' in window) || Notification.permission !== 'granted') return
+    if (!notificationsPrefs.os || !('Notification' in window) || Notification.permission !== 'granted') {
+      ackNotification(msg.id, 'closed')
+      return
+    }
     const n = new Notification(msg.title, {
       body: msg.body,
       tag: msg.tag,
@@ -91,7 +104,7 @@ export function usePresence(): UsePresenceResult {
       ackNotification(msg.id, 'clicked')
       n.close()
     }
-  }, [ackNotification, routeNotification])
+  }, [ackNotification, notificationsPrefs.os, routeNotification])
 
   // Dismiss a notification when the daemon tells us to.
   const handleCancel = useCallback((msg: CancelMessage) => {
@@ -100,12 +113,33 @@ export function usePresence(): UsePresenceResult {
     if (n) { n.close(); activeNotifsRef.current.delete(msg.id) }
   }, [])
 
+  useEffect(() => {
+    if (notificationsPrefs.inApp) return
+    setInAppNotifications(prev => {
+      prev.forEach(n => ackNotification(n.id, 'closed'))
+      return []
+    })
+  }, [ackNotification, notificationsPrefs.inApp])
+
+  useEffect(() => {
+    if (notificationsPrefs.os) return
+    activeNotifsRef.current.forEach((n, id) => {
+      n.close()
+      ackNotification(id, 'closed')
+    })
+    activeNotifsRef.current.clear()
+  }, [ackNotification, notificationsPrefs.os])
+
   // Connect presence WebSocket on mount.
   useEffect(() => {
-    const p = connectPresence({ onNotify: handleNotify, onCancel: handleCancel })
+    const p = connectPresence({
+      onNotify: handleNotify,
+      onCancel: handleCancel,
+      getNotificationPermission: effectiveNotificationPermission,
+    })
     presenceRef.current = p
     return () => { p.close(); presenceRef.current = null }
-  }, [handleNotify, handleCancel])
+  }, [handleNotify, handleCancel, effectiveNotificationPermission])
 
   // Track last user interaction for idle detection.
   useEffect(() => {
@@ -126,6 +160,10 @@ export function usePresence(): UsePresenceResult {
       last_interaction: lastInteractionRef.current,
     })
   }, [])
+
+  useEffect(() => {
+    presenceRef.current?.sendPermission(effectiveNotificationPermission())
+  }, [effectiveNotificationPermission])
 
   // Report on visibility/focus changes + heartbeat.
   // Also re-report whenever selectedId changes.
@@ -156,11 +194,13 @@ export function usePresence(): UsePresenceResult {
     document.title = count > 0 ? `(${count}) jump` : 'jump'
   }, [sessions.value, selectedId.value])
 
-  const requestNotifPermission = useCallback(async () => {
-    await Notification.requestPermission()
+  const requestNotifPermission = useCallback(async (): Promise<NotifPermission> => {
+    if (!('Notification' in window)) return 'unavailable'
+    const permission = await Notification.requestPermission()
     forceNotifPermUpdate(n => n + 1)
-    presenceRef.current?.sendPermission(Notification.permission)
-  }, [])
+    presenceRef.current?.sendPermission(effectiveNotificationPermission())
+    return permission
+  }, [effectiveNotificationPermission])
 
   return {
     notifPermission,

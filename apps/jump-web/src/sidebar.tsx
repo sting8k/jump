@@ -11,7 +11,7 @@ import { LaunchButton } from './launcher'
 import { useArrivalPulse } from './use-arrival-pulse'
 import {
   folders, selectedId, currentProjectSlug,
-  activityMap, unmatchedActiveCount, projects, connState,
+  activityMap, activityGeneration, unmatchedActiveCount, projects, connState,
   updateProjects, reorderSessions,
   type DotState,
 } from './store'
@@ -132,6 +132,7 @@ function SessionItem({
   selected,
   resuming,
   dotState: rawDotState,
+  activityGeneration: activityPulseGeneration,
   dragging,
   dropTarget,
   onClose,
@@ -145,6 +146,7 @@ function SessionItem({
   selected: boolean
   resuming?: boolean
   dotState: DotState
+  activityGeneration?: number
   dragging?: boolean
   dropTarget?: boolean
   onClose?: () => void
@@ -157,7 +159,7 @@ function SessionItem({
   const effectiveDotState = resuming ? 'working' : rawDotState
   // Nothing is "unread" if you're already looking at it.
   const dotState = (selected && (effectiveDotState === 'error' || effectiveDotState === 'unread')) ? 'none' : effectiveDotState
-  const arrival = useArrivalPulse(dotState)
+  const arrival = useArrivalPulse(dotState, activityPulseGeneration)
   const sleeping = !session.alive && session.resumable
   const memory = formatSessionMemory(session.memory_rss_bytes)
 
@@ -222,6 +224,7 @@ function FolderGroup({
   curProjectSlug,
   resumingId,
   am,
+  activityGen,
   onCloseSession,
   onClick,
 }: {
@@ -231,6 +234,7 @@ function FolderGroup({
   curProjectSlug: string | null
   resumingId: string | null
   am: ReadonlyMap<string, 'active' | 'fading'>
+  activityGen: ReadonlyMap<string, number>
   onCloseSession: (session: Session) => void
   onClick?: () => void
 }) {
@@ -289,6 +293,7 @@ function FolderGroup({
             selected={selId === s.id}
             resuming={resumingId === s.id}
             dotState={sessionDotState(s, am)}
+            activityGeneration={activityGen.get(s.id) ?? 0}
             dragging={drag !== null && s.id === visible[drag.from]?.id}
             dropTarget={drag !== null && drag.over === i && drag.from !== i}
             onClose={() => onCloseSession(s)}
@@ -307,6 +312,7 @@ export function Sidebar({
   resumingId,
   onCloseSession,
   onManageProjects,
+  onOpenSettings,
   open,
   onClose,
   onInteract,
@@ -314,6 +320,7 @@ export function Sidebar({
   resumingId: string | null
   onCloseSession: (session: Session) => void
   onManageProjects: () => void
+  onOpenSettings: () => void
   open: boolean
   onClose: () => void
   onInteract?: () => void
@@ -325,6 +332,7 @@ export function Sidebar({
   const curProjectSlug = currentProjectSlug.value
   const unmatchedCount = unmatchedActiveCount.value
   const am = activityMap.value
+  const activityGen = activityGeneration.value
   const projectBySlug = new Map(projectsVal.map(p => [p.slug, p]))
 
   const totalVisible = foldersVal.reduce(
@@ -352,13 +360,23 @@ export function Sidebar({
             href="/"
             onClick={onClose}
           >jump</a>
-          {connected && !hasProjects && (
-            <LaunchButton
-              className="sidebar-launch-btn"
-              beforeLaunch={seedHomeProject}
-              onLaunch={onClose}
-            />
-          )}
+          <div class="sidebar-header-actions">
+            {connected && !hasProjects && (
+              <LaunchButton
+                className="sidebar-launch-btn"
+                beforeLaunch={seedHomeProject}
+                onLaunch={onClose}
+              />
+            )}
+            <button
+              class="sidebar-settings-btn"
+              onClick={onOpenSettings}
+              title="Settings"
+              aria-label="Settings"
+            >
+              <IconSettings class="btn-icon" />
+            </button>
+          </div>
         </div>
         <div class="sidebar-scroll">
           {foldersVal.map(f => {
@@ -373,6 +391,7 @@ export function Sidebar({
                 curProjectSlug={curProjectSlug}
                 resumingId={resumingId}
                 am={am}
+                activityGen={activityGen}
                 onCloseSession={onCloseSession}
                 onClick={onClose}
               />

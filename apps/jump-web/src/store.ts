@@ -31,6 +31,11 @@ import {
 import { addPageResumeListener } from './page-resume'
 import { MOCK_SESSIONS, MOCK_PROJECTS } from './mock-data/index'
 import type { ResolvedTerminalOptions } from './settings-schema'
+import {
+  DEFAULT_NOTIFICATION_PREFERENCES,
+  normalizeNotificationPreferences,
+  type NotificationPreferences,
+} from './notifications'
 import type { Session as ProtocolSession } from '@jump/protocol'
 
 // ── Raw state (sources of truth) ────────────────────────────────────────────
@@ -119,6 +124,7 @@ export const terminalOptions = signal<ResolvedTerminalOptions | null>(null)
 export const keybinds = signal<ResolvedKeybind[] | null>(null)
 export const macCommandIsCtrl = signal(false)
 export const appearance = signal<AppearancePreferences>(DEFAULT_APPEARANCE)
+export const notificationPreferences = signal<NotificationPreferences>(DEFAULT_NOTIFICATION_PREFERENCES)
 
 let appearanceSaveSeq = 0
 let appearanceSaveAbort: AbortController | null = null
@@ -136,7 +142,7 @@ export function setThemeId(themeId: string): Promise<void> {
   const controller = typeof AbortController === 'undefined' ? null : new AbortController()
   appearanceSaveAbort = controller
   const seq = ++appearanceSaveSeq
-  return saveFrontendPreferences(next, controller?.signal).catch(err => {
+  return saveFrontendPreferences({ appearance: next }, controller?.signal).catch(err => {
     if (err && typeof err === 'object' && (err as { name?: string }).name === 'AbortError') return
     if (seq === appearanceSaveSeq) {
       console.error('Failed to save appearance preferences:', err)
@@ -145,6 +151,14 @@ export function setThemeId(themeId: string): Promise<void> {
     if (seq === appearanceSaveSeq) appearanceSaveAbort = null
   })
 }
+export function setNotificationPreferences(next: NotificationPreferences): Promise<void> {
+  const normalized = normalizeNotificationPreferences(next)
+  notificationPreferences.value = normalized
+  return saveFrontendPreferences({ notifications: normalized }).catch(err => {
+    console.error('Failed to save notification preferences:', err)
+  })
+}
+
 
 /** Current URL path, kept in sync with preact-iso's location. */
 export const urlPath = signal(
@@ -160,10 +174,12 @@ export const urlPath = signal(
  * so computed values that read it recompute.
  */
 export const activityMap = signal<ReadonlyMap<string, 'active' | 'fading'>>(new Map())
+export const activityGeneration = signal<ReadonlyMap<string, number>>(new Map())
 
 // Internal mutable map + timers. We write to this and then publish a
 // new (frozen) snapshot to the signal so reads trigger recomputation.
 const _actMap = new Map<string, 'active' | 'fading'>()
+const _actGeneration = new Map<string, number>()
 const _actTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const _fadeTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const ACTIVITY_MS = 3000
@@ -171,6 +187,7 @@ const FADE_MS = 800
 
 function publishActivity() {
   activityMap.value = new Map(_actMap)
+  activityGeneration.value = new Map(_actGeneration)
 }
 
 export function handleActivity(sessionId: string) {
@@ -181,6 +198,7 @@ export function handleActivity(sessionId: string) {
   if (t2) { clearTimeout(t2); _fadeTimers.delete(sessionId) }
 
   _actMap.set(sessionId, 'active')
+  _actGeneration.set(sessionId, (_actGeneration.get(sessionId) ?? 0) + 1)
 
   _actTimers.set(sessionId, setTimeout(() => {
     _actTimers.delete(sessionId)
@@ -376,6 +394,19 @@ export function upsertSession(raw: ProtocolSession): boolean {
 
 export function removeSession(id: string) {
   sessions.value = sessions.value.filter(s => s.id !== id)
+  _actMap.delete(id)
+  _actGeneration.delete(id)
+  const t1 = _actTimers.get(id)
+  if (t1) {
+    clearTimeout(t1)
+    _actTimers.delete(id)
+  }
+  const t2 = _fadeTimers.get(id)
+  if (t2) {
+    clearTimeout(t2)
+    _fadeTimers.delete(id)
+  }
+  publishActivity()
 }
 
 export function markSessionRead(id: string) {
@@ -707,6 +738,7 @@ export function initStore(): () => void {
   fetchFrontendConfig().then(fc => {
     const macCtrl = fc.settings?.macCommandIsCtrl === true
     if (fc.appearance) commitAppearance(fc.appearance)
+    if (fc.notifications) notificationPreferences.value = fc.notifications
     batch(() => {
       terminalOptions.value = buildTerminalOptions(fc.settings, fc.themeColors)
       macCommandIsCtrl.value = macCtrl

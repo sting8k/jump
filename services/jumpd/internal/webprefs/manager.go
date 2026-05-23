@@ -42,3 +42,34 @@ func (m *Manager) UpdateAppearance(appearance Appearance) (*State, error) {
 	}
 	return state, nil
 }
+func (m *Manager) Update(appearance *Appearance, notifications *Notifications) (*State, error) {
+	var normalizedAppearance *Appearance
+	if appearance != nil {
+		normalized, err := NormalizeAppearance(*appearance)
+		if err != nil {
+			return nil, err
+		}
+		normalizedAppearance = &normalized
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	state, err := Load(m.stateDir)
+	if err != nil {
+		if !errors.Is(err, ErrInvalidState) {
+			return nil, err
+		}
+		state = DefaultState()
+	}
+	if normalizedAppearance != nil {
+		state.Appearance = *normalizedAppearance
+	}
+	if notifications != nil {
+		state.Notifications = *notifications
+	}
+	if err := state.Save(m.stateDir); err != nil {
+		return nil, err
+	}
+	return state, nil
+}

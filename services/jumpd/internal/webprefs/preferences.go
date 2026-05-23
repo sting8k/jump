@@ -37,16 +37,22 @@ var (
 type Appearance struct {
 	ThemeID string `json:"theme_id"`
 }
+type Notifications struct {
+	InApp bool `json:"in_app"`
+	OS    bool `json:"os"`
+}
 
 type State struct {
-	Version    int        `json:"version"`
-	Appearance Appearance `json:"appearance"`
+	Version       int           `json:"version"`
+	Appearance    Appearance    `json:"appearance"`
+	Notifications Notifications `json:"notifications"`
 }
 
 func DefaultState() *State {
 	return &State{
-		Version:    currentVersion,
-		Appearance: Appearance{ThemeID: DefaultThemeID},
+		Version:       currentVersion,
+		Appearance:    Appearance{ThemeID: DefaultThemeID},
+		Notifications: Notifications{InApp: false, OS: false},
 	}
 }
 

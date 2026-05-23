@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { sessions, sessionsLoaded, projects, upsertSession, removeSession, markSessionRead, handleActivity, isSessionActive, isSessionFading, activityMap, sessionStaleness, peers, peerAppearance, urlPath, selectedId, navigateToSession, setNavigate, launchSession, removeProject, health, startHealthRefresh, HEALTH_REFRESH_MS, HEALTH_REFRESH_SETTLE_MS, appearance, setThemeId, initStore } from './store'
+import { sessions, sessionsLoaded, projects, upsertSession, removeSession, markSessionRead, handleActivity, isSessionActive, isSessionFading, activityMap, activityGeneration, sessionStaleness, peers, peerAppearance, urlPath, selectedId, navigateToSession, setNavigate, launchSession, removeProject, health, startHealthRefresh, HEALTH_REFRESH_MS, HEALTH_REFRESH_SETTLE_MS, appearance, setThemeId, notificationPreferences, setNotificationPreferences, initStore } from './store'
 import { APPEARANCE_STORAGE_KEY } from './appearance'
 import type { Session } from './types'
 import type { ProjectItem } from './types'
@@ -220,6 +220,29 @@ describe('appearance preferences', () => {
   })
 })
 
+describe('notification preferences', () => {
+  beforeEach(() => {
+    notificationPreferences.value = { inApp: false, os: false }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }))
+  })
+  afterEach(() => { vi.restoreAllMocks() })
+
+  it('defaults notification channels off', () => {
+    expect(notificationPreferences.value).toEqual({ inApp: false, os: false })
+  })
+
+  it('saves notification preferences to the server', async () => {
+    await setNotificationPreferences({ inApp: true, os: false })
+
+    expect(notificationPreferences.value).toEqual({ inApp: true, os: false })
+    expect(fetch).toHaveBeenCalledWith('/v1/frontend-preferences', expect.objectContaining({
+      method: 'PATCH',
+      body: JSON.stringify({ notifications: { in_app: true, os: false } }),
+    }))
+  })
+})
+
+
 describe('health refresh', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -357,6 +380,22 @@ describe('activity tracking', () => {
     vi.advanceTimersByTime(3000 + 800)
     expect(isSessionActive('sess-1')).toBe(false)
     expect(isSessionFading('sess-1')).toBe(false)
+  })
+
+  it('increments activity generation on each activity event', () => {
+    const before = activityGeneration.value.get('sess-1') ?? 0
+    handleActivity('sess-1')
+    handleActivity('sess-1')
+    expect(activityGeneration.value.get('sess-1')).toBe(before + 2)
+  })
+
+  it('cleans activity state when a session is removed', () => {
+    sessions.value = [makeSession({ id: 'sess-1' })]
+    handleActivity('sess-1')
+    expect(activityGeneration.value.has('sess-1')).toBe(true)
+    removeSession('sess-1')
+    expect(activityMap.value.has('sess-1')).toBe(false)
+    expect(activityGeneration.value.has('sess-1')).toBe(false)
   })
 
   it('resets the timer when activity fires again', () => {

@@ -18,6 +18,16 @@ that show what the daemon tells them to.
 - `notify`: show an in-app toast or OS notification (title, body, session ID, tag for dedup, optional navigation URL)
 - `cancel`: dismiss a notification (e.g. user opened the session on another device)
 
+### Settings
+
+Sidebar dots and the mobile hamburger badge are state indicators, not notification channels. They remain always on because they mirror session truth (`working`, `error`, `unread`, and transient `activity`). Notification settings only gate delivery channels: in-app toasts and OS notifications.
+
+Session notification channels are user-controlled and default off:
+- Sidebar dots and tab title badges remain always-on session state.
+- New activity can repulse an unread sidebar dot, but it does not bypass notification settings.
+- In-app toasts require the in-app notification setting.
+- OS notifications require both the OS notification setting and browser permission.
+
 ### Trigger conditions
 
 | Event | Condition |
@@ -31,8 +41,8 @@ Both are skipped when a focused client is viewing the session. If jump is focuse
 
 1. **In-app dot** (always) — yellow/blue indicator on sidebar and hamburger button
 2. **Tab title badge** — `(1) jump` when sessions have unread output
-3. **In-app toast** — when jump is focused but the event belongs to another session
-4. **OS notification** — after a 5-second grace period when jump is not focused; cancelled if user focuses jump within that window
+3. **In-app toast** — when enabled and jump is focused but the event belongs to another session
+4. **OS notification** — when enabled, after a 5-second grace period while jump is not focused; cancelled if user focuses jump within that window
 5. **Cross-device routing** — if the active device is idle (>2 min since last interaction), route to the most recently used other device
 
 ### Coalescing

@@ -35,11 +35,13 @@ export {
 
 import type { SettingsConfig, ThemeColors } from './settings-schema'
 import { normalizeAppearance, serializeAppearance, type AppearancePreferences } from './appearance'
+import { normalizeNotificationPreferences, serializeNotificationPreferences, type NotificationPreferences } from './notifications'
 
 export interface FrontendConfig {
   settings: SettingsConfig | null
   themeColors: ThemeColors | null
   appearance: AppearancePreferences | null
+  notifications: NotificationPreferences | null
 }
 
 /**
@@ -49,25 +51,35 @@ export interface FrontendConfig {
 export async function fetchFrontendConfig(): Promise<FrontendConfig> {
   try {
     const resp = await fetch('/v1/frontend-config')
-    if (!resp.ok) return { settings: null, themeColors: null, appearance: null }
+    if (!resp.ok) return { settings: null, themeColors: null, appearance: null, notifications: null }
     const json = await resp.json()
     const data = json.data ?? {}
     return {
       settings: data.settings ?? null,
       themeColors: data.theme ?? null,
       appearance: data.appearance == null ? null : normalizeAppearance(data.appearance),
+      notifications: data.notifications == null ? null : normalizeNotificationPreferences(data.notifications),
     }
   } catch {
-    return { settings: null, themeColors: null, appearance: null }
+    return { settings: null, themeColors: null, appearance: null, notifications: null }
   }
 }
 
-export async function saveFrontendPreferences(appearance: AppearancePreferences, signal?: AbortSignal): Promise<void> {
+export interface FrontendPreferencesPatch {
+  appearance?: AppearancePreferences
+  notifications?: NotificationPreferences
+}
+
+export async function saveFrontendPreferences(patch: FrontendPreferencesPatch, signal?: AbortSignal): Promise<void> {
+  const body: Record<string, unknown> = {}
+  if (patch.appearance) body.appearance = serializeAppearance(patch.appearance)
+  if (patch.notifications) body.notifications = serializeNotificationPreferences(patch.notifications)
+
   const resp = await fetch('/v1/frontend-preferences', {
     method: 'PATCH',
     signal,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ appearance: serializeAppearance(appearance) }),
+    body: JSON.stringify(body),
   })
   if (!resp.ok) {
     throw new Error(`failed to save frontend preferences: ${resp.status}`)
