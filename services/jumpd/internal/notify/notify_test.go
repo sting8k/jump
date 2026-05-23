@@ -2,6 +2,9 @@ package notify
 
 import (
 	"context"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -192,6 +195,41 @@ func TestInAppNotification_WhenFocusedElsewhere(t *testing.T) {
 	env.router.mu.Unlock()
 	if activeAfterSelect != 0 {
 		t.Fatal("selecting the session should cancel active in-app notification")
+	}
+}
+
+func TestNtfyPublishesWhenFocusedElsewhere(t *testing.T) {
+	received := make(chan string, 1)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		received <- string(body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	env := newTestEnv(t)
+	env.router.config.NtfyProvider = func() NtfyConfig {
+		return NtfyConfig{Enabled: true, ServerURL: srv.URL, TopicID: "jump-topic"}
+	}
+	env.router.config.HTTPClient = srv.Client()
+	env.addClient("c1", "desktop")
+	env.presence.Update("c1", presence.ClientState{
+		Focused:           true,
+		SelectedSessionID: "other",
+		LastInteraction:   nowSecs(),
+	})
+
+	env.upsertSession("s1", true, false, true)
+	time.Sleep(20 * time.Millisecond)
+	env.upsertSession("s1", false, false, true)
+
+	select {
+	case got := <-received:
+		if got != "[session] session finished" {
+			t.Fatalf("ntfy body = %q", got)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("expected ntfy publish while focused elsewhere")
 	}
 }
 

@@ -213,6 +213,13 @@ func (r *Router) scheduleNotification(sess store.Session, notifType, title, body
 	}
 	if r.presence.AnyFocused() {
 		r.fireInApp(sessionID, notifType, title, body)
+		r.publishNtfy(&pendingNotif{
+			sessionID: sessionID,
+			notifType: notifType,
+			title:     title,
+			body:      body,
+			workspace: workspaceLabel(sess),
+		})
 		return
 	}
 

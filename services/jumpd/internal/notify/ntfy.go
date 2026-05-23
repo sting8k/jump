@@ -78,7 +78,9 @@ func (r *Router) publishNtfyBody(cfg NtfyConfig, body string) {
 		defer cancel()
 		if err := sendNtfy(ctx, client, cfg, body); err != nil {
 			log.Printf("notify: ntfy publish failed: %v", err)
+			return
 		}
+		log.Printf("notify: sent ntfy notification")
 	}()
 }
 
