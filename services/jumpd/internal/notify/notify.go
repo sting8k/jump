@@ -134,6 +134,9 @@ func (r *Router) allowDeliveryLocked(sessionID, workspace string, now time.Time)
 
 	workspace = ntfyWorkspace(workspace)
 	workspaceHistory, workspaceLimited := prunedHistory(r.workspaceDeliveryHistory, workspace, r.config.WorkspaceNotifyRateLimit, r.config.WorkspaceNotifyRateWindow, now)
+	if sessionLimited {
+		r.deliveryHistory[sessionID] = sessionHistory
+	}
 	if workspaceLimited && len(workspaceHistory) >= r.config.WorkspaceNotifyRateLimit {
 		r.workspaceDeliveryHistory[workspace] = workspaceHistory
 		log.Printf("notify: rate-limited workspace %s (%d/%s)", workspace, r.config.WorkspaceNotifyRateLimit, r.config.WorkspaceNotifyRateWindow)
@@ -155,7 +158,7 @@ func prunedHistory(history map[string][]time.Time, key string, limit int, window
 	}
 	cutoff := now.Add(-window)
 	values := history[key]
-	kept := values[:0]
+	kept := make([]time.Time, 0, len(values))
 	for _, ts := range values {
 		if ts.After(cutoff) {
 			kept = append(kept, ts)

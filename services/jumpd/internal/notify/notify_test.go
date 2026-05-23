@@ -243,6 +243,47 @@ func TestNtfyPublishesWhenFocusedElsewhere(t *testing.T) {
 	}
 }
 
+func TestAllowDeliveryWorkspaceLimitDoesNotCorruptSessionHistory(t *testing.T) {
+	env := newTestEnv(t)
+	r := env.router
+	r.config.NotifyRateLimit = 3
+	r.config.NotifyRateWindow = 2 * time.Minute
+	r.config.WorkspaceNotifyRateLimit = 1
+	r.config.WorkspaceNotifyRateWindow = time.Minute
+
+	now := time.Unix(1_700_000_000, 0)
+	expired := now.Add(-3 * time.Minute)
+	recent := now.Add(-30 * time.Second)
+
+	r.mu.Lock()
+	r.deliveryHistory["s1"] = []time.Time{expired, recent}
+	r.workspaceDeliveryHistory["ws"] = []time.Time{recent}
+	allowed := r.allowDeliveryLocked("s1", "ws", now)
+	sessionHistory := append([]time.Time(nil), r.deliveryHistory["s1"]...)
+	r.mu.Unlock()
+
+	if allowed {
+		t.Fatal("expected workspace rate limit to reject delivery")
+	}
+	if len(sessionHistory) != 1 || !sessionHistory[0].Equal(recent) {
+		t.Fatalf("session history after workspace rejection = %v, want only recent timestamp", sessionHistory)
+	}
+
+	next := now.Add(2 * time.Minute)
+	r.mu.Lock()
+	r.workspaceDeliveryHistory["ws"] = nil
+	allowed = r.allowDeliveryLocked("s1", "ws", next)
+	sessionHistory = append([]time.Time(nil), r.deliveryHistory["s1"]...)
+	r.mu.Unlock()
+
+	if !allowed {
+		t.Fatal("expected later delivery to be allowed after workspace cap clears")
+	}
+	if len(sessionHistory) != 1 || !sessionHistory[0].Equal(next) {
+		t.Fatalf("session history after later delivery = %v, want only current timestamp", sessionHistory)
+	}
+}
+
 func TestNotifyRateLimitCapsActivityNtfy(t *testing.T) {
 	received := make(chan string, 8)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

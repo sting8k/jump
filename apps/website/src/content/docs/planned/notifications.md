@@ -25,7 +25,7 @@ Sidebar dots and the mobile hamburger badge are state indicators, not notificati
 Session notification channels are user-controlled and default off:
 - Sidebar dots and tab title badges remain always-on session state.
 - New activity can repulse an unread sidebar dot, but it does not bypass notification settings.
-- Selected sessions suppress attention dots (`error`, `unread`, `active`, `fading`); `working` remains visible as live state.
+- Selected sessions suppress attention dots (`error`, `working`, `unread`, `active`, `fading`) because the viewed terminal is the foreground state.
 - In-app toasts require the in-app notification setting.
 - OS notifications require both the OS notification setting and browser permission.
 - ntfy push requires the ntfy setting, server URL, and topic ID. Token is optional for authenticated/self-hosted servers.
