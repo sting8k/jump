@@ -257,8 +257,8 @@ function FolderGroup({
           title={`Open ${folder.name} hub`}
           onClick={onClick}
         >
-          <IconFolder class="folder-icon" />
           <span class={`folder-attention-dot session-dot-indicator ${folderDot}`} />
+          <IconFolder class="folder-icon" />
           <span>{folder.name}</span>
         </a>
         <LaunchButton

@@ -251,8 +251,8 @@ function ProjectCard({ folder: f }: { folder: Folder }) {
     <div class="home-project-card">
       <a class="home-project-link" href={`/${f.path}`}>
         <div class="home-project-name">
-          <IconFolder class="home-card-icon" />
           <span class={`home-project-attention-dot session-dot-indicator ${dotState}`} />
+          <IconFolder class="home-card-icon" />
           {f.name}
         </div>
         <div class="home-project-count">
