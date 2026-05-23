@@ -55,6 +55,11 @@ import (
 // version is set at build time via -ldflags "-X main.version=..."
 var version = "dev"
 
+const (
+	jumpdLogPathEnv  = "JUMPD_LOG_PATH"
+	jumpdLogMaxLines = 20
+)
+
 type LaunchConfig struct {
 	DefaultLauncher string             `json:"default_launcher"`
 	Launchers       []adapter.Launcher `json:"launchers"`
@@ -378,7 +383,7 @@ func startBackground(stdout, stderr io.Writer) int {
 	cmd.Stderr = logFile
 	cmd.Stdin = nil
 	// Strip JUMP_* env vars so the daemon doesn't inherit session identity.
-	cmd.Env = filterEnvPrefix(os.Environ(), "JUMP_")
+	cmd.Env = append(filterEnvPrefix(os.Environ(), "JUMP_"), jumpdLogPathEnv+"="+logPath)
 
 	if err := cmd.Start(); err != nil {
 		logFile.Close()
@@ -413,6 +418,9 @@ func startBackground(stdout, stderr io.Writer) int {
 }
 
 func serve(stderr io.Writer) int {
+	if logPath := os.Getenv(jumpdLogPathEnv); logPath != "" {
+		log.SetOutput(newCappedLogWriter(logPath, jumpdLogMaxLines))
+	}
 	jumpBin := resolveJump() // resolve once, use everywhere
 	if jumpBin != "" {
 		log.Printf("jump: %s", jumpBin)
