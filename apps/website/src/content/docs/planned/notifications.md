@@ -25,6 +25,7 @@ Sidebar dots and the mobile hamburger badge are state indicators, not notificati
 Session notification channels are user-controlled and default off:
 - Sidebar dots and tab title badges remain always-on session state.
 - New activity can repulse an unread sidebar dot, but it does not bypass notification settings.
+- Selected sessions suppress attention dots (`error`, `unread`, `active`, `fading`); `working` remains visible as live state.
 - In-app toasts require the in-app notification setting.
 - OS notifications require both the OS notification setting and browser permission.
 - ntfy push requires the ntfy setting, server URL, and topic ID. Token is optional for authenticated/self-hosted servers.
@@ -47,6 +48,14 @@ All delivery channels are skipped when a focused client is viewing the session. 
 4. **OS notification** — when enabled, after a 5-second grace period while jump is not focused; cancelled if user focuses jump within that window
 5. **ntfy push** — when enabled, after the same grace period; sent by the daemon and does not require a browser tab
 6. **Cross-device routing** — if the active device is idle (>2 min since last interaction), route to the most recently used other device
+
+### Guardrails
+
+Notification delivery is rate-limited to prevent spam:
+- max 3 deliveries per session per 2 minutes
+- max 2 deliveries per workspace per 1 minute
+
+These caps apply to delivery channels only. Sidebar dots, mobile badges, and tab badges remain state indicators and are not rate-limited.
 
 ### Coalescing
 

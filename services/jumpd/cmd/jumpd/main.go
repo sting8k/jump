@@ -473,7 +473,7 @@ func serve(stderr io.Writer) int {
 	// needed.
 	metaEvents, cancelMetaEvents := sessions.Subscribe()
 	defer cancelMetaEvents()
-	go metaStore.WatchRemovals(metaEvents)
+	go metaStore.WatchEvents(metaEvents)
 
 	// Build command titlers from adapters that implement CommandTitler.
 	commandTitlers := make(map[string]func([]string) string)
@@ -1345,6 +1345,9 @@ func serve(stderr io.Writer) int {
 			if r.Method != http.MethodPost {
 				writeError(w, http.StatusMethodNotAllowed, "bad_request", "method not allowed")
 				return
+			}
+			if sess, ok := sessions.Get(sessionID); ok && (sess.Unread || (sess.Status != nil && sess.Status.Error)) {
+				log.Printf("read: clearing attention for %s (%s)", sessionID, sess.Title)
 			}
 			sessions.Update(sessionID, func(sess *store.Session) {
 				sess.Unread = false

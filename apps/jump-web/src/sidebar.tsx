@@ -12,7 +12,7 @@ import { useArrivalPulse } from './use-arrival-pulse'
 import {
   folders, selectedId, currentProjectSlug,
   activityMap, activityGeneration, unmatchedActiveCount, projects, connState,
-  updateProjects, reorderSessions,
+  updateProjects, reorderSessions, sessionDotState,
   type DotState,
 } from './store'
 import { PeerLabel } from './peer-label'
@@ -25,19 +25,6 @@ import type { Session, Folder, ProjectItem } from './types'
 
 // Re-export DotState so existing imports keep working.
 export type { DotState }
-
-// ── Helpers ──
-
-/** Determine the dot indicator state for a session. */
-function sessionDotState(session: Session, am: ReadonlyMap<string, 'active' | 'fading'>): DotState {
-  if (session.alive && session.status?.error)   return 'error'
-  if (session.alive && session.status?.working) return 'working'
-  if (session.unread) return 'unread'
-  const act = am.get(session.id)
-  if (act === 'active') return 'active'
-  if (act === 'fading') return 'fading'
-  return 'none'
-}
 
 function formatSessionMemory(bytes?: number): string | null {
   if (typeof bytes !== 'number' || !Number.isFinite(bytes) || bytes <= 0) return null
@@ -157,8 +144,9 @@ function SessionItem({
   onDragEnd?: () => void
 }) {
   const effectiveDotState = resuming ? 'working' : rawDotState
-  // Nothing is "unread" if you're already looking at it.
-  const dotState = (selected && (effectiveDotState === 'error' || effectiveDotState === 'unread')) ? 'none' : effectiveDotState
+  // Nothing is "attention" if you're already looking at it. Keep working
+  // visible because it is live state, not an attention badge.
+  const dotState = (selected && effectiveDotState !== 'working') ? 'none' : effectiveDotState
   const arrival = useArrivalPulse(dotState, activityPulseGeneration)
   const sleeping = !session.alive && session.resumable
   const memory = formatSessionMemory(session.memory_rss_bytes)

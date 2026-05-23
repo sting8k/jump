@@ -20,17 +20,27 @@ import (
 
 // Config holds tunable parameters for the notification router.
 type Config struct {
-	GracePeriod   time.Duration // delay before firing (default 5s); also serves as the coalescing window
-	IdleThreshold time.Duration // client idle threshold for cross-device routing (default 2m)
-	NtfyProvider  func() NtfyConfig
-	HTTPClient    *http.Client
+	GracePeriod               time.Duration // delay before firing (default 5s); also serves as the coalescing window
+	IdleThreshold             time.Duration // client idle threshold for cross-device routing (default 2m)
+	ActivityNtfyCooldown      time.Duration // throttle repeated ntfy output pings for already-unread sessions
+	NotifyRateLimit           int           // max notification deliveries per session within NotifyRateWindow
+	NotifyRateWindow          time.Duration
+	WorkspaceNotifyRateLimit  int // max notification deliveries per workspace within WorkspaceNotifyRateWindow
+	WorkspaceNotifyRateWindow time.Duration
+	NtfyProvider              func() NtfyConfig
+	HTTPClient                *http.Client
 }
 
 // DefaultConfig returns sensible defaults.
 func DefaultConfig() Config {
 	return Config{
-		GracePeriod:   5 * time.Second,
-		IdleThreshold: 2 * time.Minute,
+		GracePeriod:               5 * time.Second,
+		IdleThreshold:             2 * time.Minute,
+		ActivityNtfyCooldown:      30 * time.Second,
+		NotifyRateLimit:           3,
+		NotifyRateWindow:          2 * time.Minute,
+		WorkspaceNotifyRateLimit:  2,
+		WorkspaceNotifyRateWindow: time.Minute,
 	}
 }
 
@@ -68,11 +78,14 @@ type Router struct {
 	sessions *store.Store
 	config   Config
 
-	mu        sync.Mutex
-	prevState map[string]sessionSnapshot
-	pending   map[string]*pendingNotif // sessionID → pending
-	active    map[string]activeNotif   // notifID → active (sent but not dismissed)
-	nextID    int
+	mu                       sync.Mutex
+	prevState                map[string]sessionSnapshot
+	pending                  map[string]*pendingNotif // sessionID → pending
+	active                   map[string]activeNotif   // notifID → active (sent but not dismissed)
+	lastActivityNtfy         map[string]time.Time
+	deliveryHistory          map[string][]time.Time
+	workspaceDeliveryHistory map[string][]time.Time
+	nextID                   int
 }
 
 type sessionSnapshot struct {
@@ -89,18 +102,101 @@ type activeNotif struct {
 // New creates a notification router.
 func New(p *presence.Table, s *store.Store, cfg Config) *Router {
 	return &Router{
-		presence:  p,
-		sessions:  s,
-		config:    cfg,
-		prevState: make(map[string]sessionSnapshot),
-		pending:   make(map[string]*pendingNotif),
-		active:    make(map[string]activeNotif),
+		presence:                 p,
+		sessions:                 s,
+		config:                   cfg,
+		prevState:                make(map[string]sessionSnapshot),
+		pending:                  make(map[string]*pendingNotif),
+		active:                   make(map[string]activeNotif),
+		lastActivityNtfy:         make(map[string]time.Time),
+		deliveryHistory:          make(map[string][]time.Time),
+		workspaceDeliveryHistory: make(map[string][]time.Time),
 	}
 }
 
 func (r *Router) genID() string {
 	r.nextID++
 	return fmt.Sprintf("notif-%d", r.nextID)
+}
+func (r *Router) allowDelivery(sessionID, workspace string, now time.Time) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.allowDeliveryLocked(sessionID, workspace, now)
+}
+
+func (r *Router) allowDeliveryLocked(sessionID, workspace string, now time.Time) bool {
+	sessionHistory, sessionLimited := prunedHistory(r.deliveryHistory, sessionID, r.config.NotifyRateLimit, r.config.NotifyRateWindow, now)
+	if sessionLimited && len(sessionHistory) >= r.config.NotifyRateLimit {
+		r.deliveryHistory[sessionID] = sessionHistory
+		log.Printf("notify: rate-limited session %s (%d/%s)", sessionID, r.config.NotifyRateLimit, r.config.NotifyRateWindow)
+		return false
+	}
+
+	workspace = ntfyWorkspace(workspace)
+	workspaceHistory, workspaceLimited := prunedHistory(r.workspaceDeliveryHistory, workspace, r.config.WorkspaceNotifyRateLimit, r.config.WorkspaceNotifyRateWindow, now)
+	if workspaceLimited && len(workspaceHistory) >= r.config.WorkspaceNotifyRateLimit {
+		r.workspaceDeliveryHistory[workspace] = workspaceHistory
+		log.Printf("notify: rate-limited workspace %s (%d/%s)", workspace, r.config.WorkspaceNotifyRateLimit, r.config.WorkspaceNotifyRateWindow)
+		return false
+	}
+
+	if sessionLimited {
+		r.deliveryHistory[sessionID] = append(sessionHistory, now)
+	}
+	if workspaceLimited {
+		r.workspaceDeliveryHistory[workspace] = append(workspaceHistory, now)
+	}
+	return true
+}
+
+func prunedHistory(history map[string][]time.Time, key string, limit int, window time.Duration, now time.Time) ([]time.Time, bool) {
+	if key == "" || limit <= 0 || window <= 0 {
+		return nil, false
+	}
+	cutoff := now.Add(-window)
+	values := history[key]
+	kept := values[:0]
+	for _, ts := range values {
+		if ts.After(cutoff) {
+			kept = append(kept, ts)
+		}
+	}
+	return kept, true
+}
+func (r *Router) markActivityCooldown(sessionID string, now time.Time) {
+	if sessionID == "" {
+		return
+	}
+	r.mu.Lock()
+	r.lastActivityNtfy[sessionID] = now
+	r.mu.Unlock()
+}
+
+func (r *Router) allowWorkspaceDeliveryForEvents(events []*pendingNotif, now time.Time) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	histories := make(map[string][]time.Time)
+	for _, ev := range events {
+		workspace := ntfyWorkspace(ev.workspace)
+		if _, seen := histories[workspace]; seen {
+			continue
+		}
+		history, limited := prunedHistory(r.workspaceDeliveryHistory, workspace, r.config.WorkspaceNotifyRateLimit, r.config.WorkspaceNotifyRateWindow, now)
+		if limited && len(history) >= r.config.WorkspaceNotifyRateLimit {
+			r.workspaceDeliveryHistory[workspace] = history
+			log.Printf("notify: rate-limited workspace %s (%d/%s)", workspace, r.config.WorkspaceNotifyRateLimit, r.config.WorkspaceNotifyRateWindow)
+			return false
+		}
+		if limited {
+			histories[workspace] = history
+		}
+	}
+
+	for workspace, history := range histories {
+		r.workspaceDeliveryHistory[workspace] = append(history, now)
+	}
+	return true
 }
 
 // Run subscribes to store events and processes them until ctx is cancelled.
@@ -141,11 +237,17 @@ func snapshotOf(s store.Session) sessionSnapshot {
 
 func (r *Router) handleEvent(ev store.Event) {
 	if ev.Type != "session-upsert" || ev.Session == nil {
-		// session-remove: clean up prevState
-		if ev.Type == "session-remove" {
+		switch ev.Type {
+		case "session-remove":
 			r.mu.Lock()
 			delete(r.prevState, ev.ID)
+			delete(r.lastActivityNtfy, ev.ID)
+			delete(r.deliveryHistory, ev.ID)
+			// Workspace delivery history is time-windowed and shared across
+			// sessions, so it is intentionally not cleared on session removal.
 			r.mu.Unlock()
+		case "session-activity":
+			r.handleActivity(ev.ID)
 		}
 		return
 	}
@@ -176,6 +278,48 @@ func (r *Router) handleEvent(ev store.Event) {
 		}
 		r.scheduleNotification(sess, "unread", sess.Title, body)
 	}
+}
+
+func (r *Router) handleActivity(sessionID string) {
+	if sessionID == "" || r.presence.AnyViewing(sessionID) {
+		return
+	}
+
+	sess, ok := r.sessions.Get(sessionID)
+	if !ok || !sess.Alive || !sess.Unread {
+		return
+	}
+	if sess.Status != nil && sess.Status.Working {
+		// Active runners can emit activity for every output chunk. Let the
+		// finished transition notify instead of pinging repeatedly while work is
+		// still in progress.
+		return
+	}
+
+	now := time.Now()
+	r.mu.Lock()
+	if _, hasPending := r.pending[sessionID]; hasPending {
+		r.mu.Unlock()
+		return
+	}
+	if last := r.lastActivityNtfy[sessionID]; !last.IsZero() && now.Sub(last) < r.config.ActivityNtfyCooldown {
+		r.mu.Unlock()
+		return
+	}
+	if !r.allowDeliveryLocked(sessionID, workspaceLabel(sess), now) {
+		r.mu.Unlock()
+		return
+	}
+	r.lastActivityNtfy[sessionID] = now
+	r.mu.Unlock()
+
+	r.publishNtfy(&pendingNotif{
+		sessionID: sessionID,
+		notifType: "unread",
+		title:     sess.Title,
+		body:      "New output",
+		workspace: workspaceLabel(sess),
+	})
 }
 
 func formatFinishedBody(sess store.Session) string {
@@ -212,6 +356,10 @@ func (r *Router) scheduleNotification(sess store.Session, notifType, title, body
 		return
 	}
 	if r.presence.AnyFocused() {
+		if !r.allowDelivery(sessionID, workspaceLabel(sess), time.Now()) {
+			return
+		}
+		r.markActivityCooldown(sessionID, time.Now())
 		r.fireInApp(sessionID, notifType, title, body)
 		r.publishNtfy(&pendingNotif{
 			sessionID: sessionID,
@@ -323,10 +471,14 @@ func (r *Router) firePending(sessionID string) {
 	if r.presence.AnyFocused() || r.presence.AnyViewing(sessionID) {
 		return
 	}
+	if !r.allowDelivery(sessionID, p.workspace, time.Now()) {
+		return
+	}
 
 	target := r.presence.BestNotifyTarget(r.config.IdleThreshold)
 	if target == nil {
 		log.Printf("notify: no browser target for session %s (no client with granted permission)", sessionID)
+		r.markActivityCooldown(sessionID, time.Now())
 		r.publishNtfy(p)
 		return
 	}
@@ -346,6 +498,7 @@ func (r *Router) firePending(sessionID string) {
 	r.mu.Unlock()
 
 	sendJSON(target.Conn, msg)
+	r.markActivityCooldown(sessionID, time.Now())
 	log.Printf("notify: sent %s to client %s for session %s (%s)", p.notifID, target.ID, sessionID, p.notifType)
 	r.publishNtfy(p)
 
@@ -360,6 +513,9 @@ func (r *Router) firePending(sessionID string) {
 
 func (r *Router) fireCoalesced(events []*pendingNotif) {
 	count := len(events)
+	if !r.allowWorkspaceDeliveryForEvents(events, time.Now()) {
+		return
+	}
 	target := r.presence.BestNotifyTarget(r.config.IdleThreshold)
 	if target == nil {
 		log.Printf("notify: no browser target for coalesced notification (%d sessions)", count)

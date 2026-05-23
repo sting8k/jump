@@ -178,6 +178,31 @@ func TestWriteFilePermissions(t *testing.T) {
 	}
 }
 
+func TestWatchEventsPersistsSessionUpserts(t *testing.T) {
+	s := newStore(t)
+	events := make(chan store.Event, 1)
+	done := make(chan struct{})
+	go func() {
+		s.WatchEvents(events)
+		close(done)
+	}()
+
+	sess := sampleSession()
+	sess.Alive = true
+	sess.Unread = true
+	events <- store.Event{Type: "session-upsert", ID: sess.ID, Session: &sess}
+	close(events)
+	<-done
+
+	out, err := s.Read(sess.ID)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if !out.Unread {
+		t.Fatal("session-upsert should persist unread=true")
+	}
+}
+
 func TestRemoveIsIdempotent(t *testing.T) {
 	s := newStore(t)
 	if err := s.Write(sampleSession()); err != nil {
@@ -319,7 +344,7 @@ func TestSweepReturnsEmptyForMissingDir(t *testing.T) {
 // This is the catch-all for slug-takeover orphans (and any other
 // store removal not paired with an explicit Remove call). A
 // regression here would silently leak per-session directories.
-func TestWatchRemovalsRemovesOnSessionRemoveEvent(t *testing.T) {
+func TestWatchEventsRemovesOnSessionRemoveEvent(t *testing.T) {
 	s := newStore(t)
 	target := sampleSession()
 	target.ID = "sess-target"
@@ -335,7 +360,7 @@ func TestWatchRemovalsRemovesOnSessionRemoveEvent(t *testing.T) {
 	events := make(chan store.Event, 4)
 	done := make(chan struct{})
 	go func() {
-		s.WatchRemovals(events)
+		s.WatchEvents(events)
 		close(done)
 	}()
 
@@ -355,7 +380,7 @@ func TestWatchRemovalsRemovesOnSessionRemoveEvent(t *testing.T) {
 	select {
 	case <-done:
 	case <-time.After(2 * time.Second):
-		t.Fatal("WatchRemovals did not return after channel close")
+		t.Fatal("WatchEvents did not return after channel close")
 	}
 
 	if _, err := os.Stat(s.SessionDir(target.ID)); !os.IsNotExist(err) {

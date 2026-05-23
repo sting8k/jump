@@ -291,15 +291,25 @@ export const currentProjectSlug = computed(() =>
 /** Dot state for the mobile hamburger: summarizes background session activity. */
 export type DotState = 'working' | 'error' | 'unread' | 'active' | 'fading' | 'none'
 
+export function sessionDotState(session: Session, am: ReadonlyMap<string, 'active' | 'fading'>): DotState {
+  if (session.alive && session.status?.error)   return 'error'
+  if (session.alive && session.status?.working) return 'working'
+  if (session.unread) return 'unread'
+  const act = am.get(session.id)
+  if (act === 'active') return 'active'
+  if (act === 'fading') return 'fading'
+  return 'none'
+}
+
 export const backgroundActivity = computed((): DotState => {
   const sel = selectedId.value
   const am = activityMap.value
   const others = sessions.value.filter(s => s.id !== sel && s.alive)
-  if (others.some(s => s.status?.error))          return 'error'
-  if (others.some(s => s.status?.working))        return 'working'
-  if (others.some(s => s.unread))                 return 'unread'
-  if (others.some(s => am.get(s.id) === 'active')) return 'active'
-  if (others.some(s => am.get(s.id) === 'fading')) return 'fading'
+  if (others.some(s => sessionDotState(s, am) === 'error'))   return 'error'
+  if (others.some(s => sessionDotState(s, am) === 'working')) return 'working'
+  if (others.some(s => sessionDotState(s, am) === 'unread'))  return 'unread'
+  if (others.some(s => sessionDotState(s, am) === 'active'))  return 'active'
+  if (others.some(s => sessionDotState(s, am) === 'fading'))  return 'fading'
   return 'none'
 })
 
