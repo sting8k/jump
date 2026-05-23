@@ -30,20 +30,36 @@ function makeSession(overrides: Partial<Session> & { id: string }): Session {
 }
 
 describe('attention model', () => {
-  it('prioritizes persistent session state over transient activity', () => {
-    const am = new Map([['sess-1', 'active' as const]])
-
-    expect(sessionDotState(makeSession({ id: 'sess-1', unread: true }), am)).toBe('unread')
-    expect(sessionDotState(makeSession({ id: 'sess-1', status: { label: '', working: true } }), am)).toBe('working')
-    expect(sessionDotState(makeSession({ id: 'sess-1', status: { label: 'failed', working: false, error: true } }), am)).toBe('error')
+  it.each([
+    ['idle read', makeSession({ id: 'sess-1' }), new Map<string, 'active' | 'fading'>(), 'none'],
+    ['active pulse', makeSession({ id: 'sess-1' }), new Map([['sess-1', 'active' as const]]), 'active'],
+    ['fading pulse', makeSession({ id: 'sess-1' }), new Map([['sess-1', 'fading' as const]]), 'fading'],
+    ['unread beats activity', makeSession({ id: 'sess-1', unread: true }), new Map([['sess-1', 'active' as const]]), 'unread'],
+    ['working beats unread', makeSession({ id: 'sess-1', unread: true, status: { label: '', working: true } }), new Map<string, 'active' | 'fading'>(), 'working'],
+    ['error beats working', makeSession({ id: 'sess-1', unread: true, status: { label: 'failed', working: true, error: true } }), new Map<string, 'active' | 'fading'>(), 'error'],
+  ])('computes session dot state: %s', (_name, session, activity, want) => {
+    expect(sessionDotState(session, activity)).toBe(want)
   })
 
-  it('suppresses all dots for the selected session', () => {
-    const am = new Map<string, 'active' | 'fading'>()
+  it.each([
+    ['selected unread', makeSession({ id: 'sess-1', unread: true }), {}, 'none'],
+    ['selected working', makeSession({ id: 'sess-1', status: { label: '', working: true } }), {}, 'none'],
+    ['selected error', makeSession({ id: 'sess-1', status: { label: 'failed', working: false, error: true } }), {}, 'none'],
+    ['selected resuming', makeSession({ id: 'sess-1' }), { resuming: true }, 'none'],
+    ['background resuming', makeSession({ id: 'sess-1' }), { resuming: true }, 'working'],
+  ])('applies foreground/resume rule: %s', (_name, session, opts, want) => {
+    const selected = _name.startsWith('selected')
+    expect(sessionDotState(session, new Map(), { selected, ...opts })).toBe(want)
+  })
 
-    expect(sessionDotState(makeSession({ id: 'sess-1', unread: true }), am, { selected: true })).toBe('none')
-    expect(sessionDotState(makeSession({ id: 'sess-1', status: { label: '', working: true } }), am, { selected: true })).toBe('none')
-    expect(sessionDotState(makeSession({ id: 'sess-1' }), am, { selected: true, resuming: true })).toBe('none')
+  it.each([
+    ['error priority', [makeSession({ id: 'a', unread: true }), makeSession({ id: 'b', status: { label: 'failed', working: false, error: true } })], 'error'],
+    ['working priority', [makeSession({ id: 'a', unread: true }), makeSession({ id: 'b', status: { label: '', working: true } })], 'working'],
+    ['unread priority', [makeSession({ id: 'a', unread: true }), makeSession({ id: 'b' })], 'unread'],
+    ['active priority', [makeSession({ id: 'a' }), makeSession({ id: 'b' })], 'active'],
+  ])('summarizes background dot priority: %s', (_name, sessions, want) => {
+    const activity = new Map<string, 'active' | 'fading'>([['a', 'active']])
+    expect(backgroundDotState(sessions, activity, 'selected')).toBe(want)
   })
 
   it('summarizes project attention excluding only the selected session', () => {
@@ -56,7 +72,6 @@ describe('attention model', () => {
     expect(projectDotState(sessions, am, 'selected')).toBe('unread')
     expect(projectDotState(sessions, am, 'background')).toBe('working')
   })
-
 
   it('keeps background unread visible when another session is selected', () => {
     const am = new Map<string, 'active' | 'fading'>()
