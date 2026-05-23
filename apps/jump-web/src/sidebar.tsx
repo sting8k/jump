@@ -369,12 +369,15 @@ export function Sidebar({
               />
             )}
             <button
-              class="sidebar-settings-btn"
-              onClick={onOpenSettings}
-              title="Settings"
-              aria-label="Settings"
+              class="sidebar-settings-btn sidebar-header-action-btn"
+              onClick={onManageProjects}
+              title="Manage projects"
+              aria-label="Manage projects"
             >
-              <IconSettings class="btn-icon" />
+              <IconFolder class="btn-icon" />
+              {unmatchedCount > 0 && (
+                <span class="sidebar-header-badge">{unmatchedCount}</span>
+              )}
             </button>
           </div>
         </div>
@@ -411,12 +414,9 @@ export function Sidebar({
           )}
         </div>
         <div class="sidebar-footer">
-          <button class="manage-projects-btn" onClick={onManageProjects}>
+          <button class="manage-projects-btn sidebar-footer-action-btn" onClick={onOpenSettings}>
             <IconSettings class="btn-icon" />
-            <span>Manage projects</span>
-            {unmatchedCount > 0 && (
-              <span class="manage-projects-badge">{unmatchedCount}</span>
-            )}
+            <span>Settings</span>
           </button>
           <SidebarHostMetrics />
         </div>
