@@ -309,9 +309,9 @@ func piAssistantStatusEvent(stopReason string, content []struct {
 	switch stopReason {
 	case "toolUse", "tool_use":
 		return adapter.Event{Status: &adapter.Status{Working: true}}, true
-	case "stop", "end_turn":
+	case "stop", "end_turn", "stop_sequence":
 		return adapter.Event{Status: &adapter.Status{}, Unread: adapter.BoolPtr(true)}, true
-	case "aborted", "stop_sequence":
+	case "aborted":
 		return adapter.Event{Status: &adapter.Status{}}, true
 	case "error":
 		if filePath != "" {

@@ -33,15 +33,17 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/sting8k/jump/packages/paths"
 	"github.com/sting8k/jump/services/jumpd/internal/store"
 )
 
 const (
-	metaFile = "meta.json"
-	dirMode  = 0o700
-	fileMode = 0o600
+	metaFile              = "meta.json"
+	dirMode               = 0o700
+	fileMode              = 0o600
+	writeCoalesceInterval = 500 * time.Millisecond
 )
 
 // Per-session directories may also contain scrollback files written
@@ -178,19 +180,58 @@ func (s *Store) Remove(id string) error {
 // loop. Peer sessions are ignored by Write because this daemon is not their
 // authoritative owner.
 func (s *Store) WatchEvents(events <-chan store.Event) {
-	for ev := range events {
-		switch ev.Type {
-		case "session-upsert":
-			if ev.Session == nil {
-				continue
+	s.watchEvents(events, writeCoalesceInterval)
+}
+
+func (s *Store) watchEvents(events <-chan store.Event, interval time.Duration) {
+	pending := make(map[string]store.Session)
+	flush := func(id string, sess store.Session) {
+		if err := s.Write(sess); err != nil {
+			log.Printf("sessionmeta: write %s: %v", id, err)
+		}
+	}
+	flushAll := func() {
+		for id, sess := range pending {
+			flush(id, sess)
+			delete(pending, id)
+		}
+	}
+
+	if interval <= 0 {
+		for ev := range events {
+			s.handleEventImmediate(ev, flush, pending)
+			flushAll()
+		}
+		return
+	}
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case ev, ok := <-events:
+			if !ok {
+				flushAll()
+				return
 			}
-			if err := s.Write(*ev.Session); err != nil {
-				log.Printf("sessionmeta: write %s: %v", ev.ID, err)
-			}
-		case "session-remove":
-			if err := s.Remove(ev.ID); err != nil {
-				log.Printf("sessionmeta: cleanup remove %s: %v", ev.ID, err)
-			}
+			s.handleEventImmediate(ev, flush, pending)
+		case <-ticker.C:
+			flushAll()
+		}
+	}
+}
+
+func (s *Store) handleEventImmediate(ev store.Event, flush func(string, store.Session), pending map[string]store.Session) {
+	switch ev.Type {
+	case "session-upsert":
+		if ev.Session == nil {
+			return
+		}
+		pending[ev.ID] = *ev.Session
+	case "session-remove":
+		delete(pending, ev.ID)
+		if err := s.Remove(ev.ID); err != nil {
+			log.Printf("sessionmeta: cleanup remove %s: %v", ev.ID, err)
 		}
 	}
 }

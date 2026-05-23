@@ -203,6 +203,56 @@ func TestWatchEventsPersistsSessionUpserts(t *testing.T) {
 	}
 }
 
+func TestWatchEventsCoalescesUpsertsToLatestSession(t *testing.T) {
+	s := newStore(t)
+	events := make(chan store.Event, 2)
+	done := make(chan struct{})
+	go func() {
+		s.watchEvents(events, time.Hour)
+		close(done)
+	}()
+
+	first := sampleSession()
+	first.Alive = true
+	first.Unread = false
+	latest := first
+	latest.Unread = true
+
+	events <- store.Event{Type: "session-upsert", ID: first.ID, Session: &first}
+	events <- store.Event{Type: "session-upsert", ID: latest.ID, Session: &latest}
+	close(events)
+	<-done
+
+	out, err := s.Read(first.ID)
+	if err != nil {
+		t.Fatalf("Read: %v", err)
+	}
+	if !out.Unread {
+		t.Fatal("expected coalesced write to persist latest unread=true")
+	}
+}
+
+func TestWatchEventsRemoveCancelsPendingUpsert(t *testing.T) {
+	s := newStore(t)
+	events := make(chan store.Event, 2)
+	done := make(chan struct{})
+	go func() {
+		s.watchEvents(events, time.Hour)
+		close(done)
+	}()
+
+	sess := sampleSession()
+	sess.Alive = true
+	events <- store.Event{Type: "session-upsert", ID: sess.ID, Session: &sess}
+	events <- store.Event{Type: "session-remove", ID: sess.ID}
+	close(events)
+	<-done
+
+	if _, err := os.Stat(filepath.Join(s.SessionDir(sess.ID), metaFile)); !os.IsNotExist(err) {
+		t.Fatalf("pending upsert should be cancelled by remove; stat err=%v", err)
+	}
+}
+
 func TestRemoveIsIdempotent(t *testing.T) {
 	s := newStore(t)
 	if err := s.Write(sampleSession()); err != nil {

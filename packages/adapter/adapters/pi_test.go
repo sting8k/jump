@@ -328,6 +328,21 @@ func TestParseNewLinesAssistantStop(t *testing.T) {
 	}
 }
 
+func TestParseNewLinesAssistantStopSequence(t *testing.T) {
+	events := NewPi().ParseNewLines([]string{
+		`{"type":"message","id":"a1","message":{"role":"assistant","stopReason":"stop_sequence","content":[{"type":"text","text":"Done."}]}}`,
+	}, "")
+	if len(events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(events))
+	}
+	if events[0].Status == nil || events[0].Status.Working {
+		t.Error("expected working=false status on stop_sequence")
+	}
+	if events[0].Unread == nil || !*events[0].Unread {
+		t.Error("expected unread=true on stop_sequence (turn complete)")
+	}
+}
+
 func TestParseNewLinesAssistantToolUse(t *testing.T) {
 	// toolUse stopReason means assistant is still working — emit working=true.
 	events := NewPi().ParseNewLines([]string{
