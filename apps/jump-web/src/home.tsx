@@ -2,7 +2,7 @@
 // Reads shared data from the store (signals).
 
 import { useEffect, useRef, useState } from 'preact/hooks'
-import { addProject, removeProject, health, peers, folders, sessions, projects, discovered, launchers as launchersSignal, defaultLauncher as defaultLauncherSignal, launchSession } from './store'
+import { addProject, removeProject, health, peers, folders, sessions, projects, discovered, launchers as launchersSignal, defaultLauncher as defaultLauncherSignal, launchSession, activityMap, projectDotState, selectedId } from './store'
 import { PeerLabel } from './peer-label'
 import { IconFolder, IconPlay, IconTrash } from './icons'
 import type { Folder, LauncherDef } from './types'
@@ -240,6 +240,7 @@ function HomeWorkspaceAdd() {
 
 function ProjectCard({ folder: f }: { folder: Folder }) {
   const alive = f.sessions.filter(s => s.alive).length
+  const dotState = projectDotState(f.sessions, activityMap.value, selectedId.value)
   const resumable = f.sessions.filter(s => !s.alive && s.resumable).length
   const handleRemove = () => {
     if (!confirm(`Remove workspace "${f.name}"? Sessions will not be deleted.`)) return
@@ -249,7 +250,11 @@ function ProjectCard({ folder: f }: { folder: Folder }) {
   return (
     <div class="home-project-card">
       <a class="home-project-link" href={`/${f.path}`}>
-        <div class="home-project-name"><IconFolder class="home-card-icon" />{f.name}</div>
+        <div class="home-project-name">
+          <IconFolder class="home-card-icon" />
+          <span class={`home-project-attention-dot session-dot-indicator ${dotState}`} />
+          {f.name}
+        </div>
         <div class="home-project-count">
           {alive > 0 && <span class="home-project-alive">{alive} alive</span>}
           {alive > 0 && resumable > 0 && <span class="home-project-rest"> · </span>}

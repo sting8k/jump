@@ -12,7 +12,7 @@ import { useArrivalPulse } from './use-arrival-pulse'
 import {
   folders, selectedId, currentProjectSlug,
   activityMap, activityGeneration, unmatchedActiveCount, projects, connState,
-  updateProjects, reorderSessions, sessionDotState,
+  updateProjects, reorderSessions, projectDotState, sessionDotState,
   type DotState,
 } from './store'
 import { PeerLabel } from './peer-label'
@@ -247,6 +247,7 @@ function FolderGroup({
   const visible = folder.sessions.filter(s => s.alive || s.resumable)
   const displayItems = drag ? reorder(visible, drag.from, drag.over) : visible
   const isCurrent = curProjectSlug === folder.path
+  const folderDot = projectDotState(folder.sessions, am, selId)
   return (
     <div class="folder">
       <div class="folder-header">
@@ -257,6 +258,7 @@ function FolderGroup({
           onClick={onClick}
         >
           <IconFolder class="folder-icon" />
+          <span class={`folder-attention-dot session-dot-indicator ${folderDot}`} />
           <span>{folder.name}</span>
         </a>
         <LaunchButton

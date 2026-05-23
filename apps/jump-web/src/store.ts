@@ -20,13 +20,14 @@ import { resolveViewFromPath, viewToPath, sessionPath } from './routing'
 import { buildProjectFolders, matchSession } from './projects'
 import {
   backgroundDotState,
+  projectDotState,
   sessionIdsInProject,
   sessionDotState,
   unreadSessionCount,
   type ActivityState,
   type DotState,
 } from './attention'
-export { sessionDotState }
+export { projectDotState, sessionDotState }
 export type { DotState }
 
 import { fetchFrontendConfig, saveFrontendPreferences, buildTerminalOptions, resolveKeybinds, type ResolvedKeybind } from './config'

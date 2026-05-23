@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   backgroundDotState,
+  projectDotState,
   sessionDotState,
   sessionIdsInProject,
   unreadSessionCount,
@@ -44,6 +45,18 @@ describe('attention model', () => {
     expect(sessionDotState(makeSession({ id: 'sess-1', status: { label: '', working: true } }), am, { selected: true })).toBe('none')
     expect(sessionDotState(makeSession({ id: 'sess-1' }), am, { selected: true, resuming: true })).toBe('none')
   })
+
+  it('summarizes project attention excluding only the selected session', () => {
+    const am = new Map<string, 'active' | 'fading'>()
+    const sessions = [
+      makeSession({ id: 'selected', status: { label: '', working: true } }),
+      makeSession({ id: 'background', unread: true }),
+    ]
+
+    expect(projectDotState(sessions, am, 'selected')).toBe('unread')
+    expect(projectDotState(sessions, am, 'background')).toBe('working')
+  })
+
 
   it('keeps background unread visible when another session is selected', () => {
     const am = new Map<string, 'active' | 'fading'>()

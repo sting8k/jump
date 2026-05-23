@@ -54,6 +54,19 @@ export function backgroundDotState(
   )
 }
 
+export function projectDotState(
+  projectSessions: Session[],
+  activity: ReadonlyMap<string, ActivityState>,
+  selectedSessionId: string | null,
+ ): DotState {
+  return summarizeDotStates(
+    projectSessions
+      .filter(s => s.alive && s.id !== selectedSessionId)
+      .map(s => sessionDotState(s, activity)),
+  )
+}
+
+
 export function unreadSessionCount(allSessions: Session[], selectedSessionId: string | null): number {
   return allSessions.filter(s => s.id !== selectedSessionId && s.alive && s.unread).length
 }
