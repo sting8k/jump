@@ -1412,6 +1412,39 @@ func TestApplyPersistedAttributionsPopulatesSlugAfterRestart(t *testing.T) {
 	}
 }
 
+func TestProcessAttributedFileIncrementalPiStopMarksUnread(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "pi-session.jsonl")
+	now := time.Now()
+	content := `{"type":"message","message":{"role":"assistant","stopReason":"stop","content":[{"type":"text","text":"Done."}]}}
+`
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := store.New()
+	s.Upsert(store.Session{ID: "sess-runner", Cwd: "/tmp", Kind: "pi", Alive: true, Status: &store.Status{Working: true}, StartedAt: now.UTC().Format(time.RFC3339)})
+	fm := NewFileMonitorWithAttributions(s, nil)
+	if fm.watcher != nil {
+		fm.watcher.Close()
+		fm.watcher = nil
+	}
+	pi := adapters.NewPi()
+	fm.sessions["sess-runner"] = &monitoredSession{id: "sess-runner", cwd: "/tmp", kind: "pi", adapter: pi, fileMon: pi, filer: pi, readAll: false}
+
+	fm.mu.Lock()
+	fm.processAttributedFileLocked("sess-runner", filePath)
+	fm.mu.Unlock()
+
+	post, _ := s.Get("sess-runner")
+	if post.Status != nil {
+		t.Fatalf("Status after incremental stop = %+v, want nil", post.Status)
+	}
+	if !post.Unread {
+		t.Fatal("expected unread=true after incremental Pi stop")
+	}
+}
+
 func TestProcessAttributedFileFullReadRecoversUnreadForWorkingSession(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "pi-session.jsonl")
