@@ -17,6 +17,7 @@ const (
 	VercelThemeID    = "vercel"
 	HUDThemeID       = "hud"
 	SlateNoirThemeID = "slate-noir"
+	ZerobyteThemeID  = "zerobyte"
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 		VercelThemeID:    {},
 		HUDThemeID:       {},
 		SlateNoirThemeID: {},
+		ZerobyteThemeID:  {},
 	}
 )
 

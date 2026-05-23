@@ -19,12 +19,14 @@ export const SPACETIME_THEME_ID = 'spacetime'
 export const VERCEL_THEME_ID = 'vercel'
 export const HUD_THEME_ID = 'hud'
 export const SLATE_NOIR_THEME_ID = 'slate-noir'
+export const ZEROBYTE_THEME_ID = 'zerobyte'
 export const THEME_CATALOG: readonly ThemeDefinition[] = [
   { id: DEFAULT_THEME_ID, label: 'Default', themeColor: '#0a0e13' },
   { id: SPACETIME_THEME_ID, label: 'Spacetime', themeColor: '#202126' },
   { id: VERCEL_THEME_ID, label: 'Command Center', themeColor: '#0a0e12' },
   { id: HUD_THEME_ID, label: 'Signal HUD', themeColor: '#0b151f' },
   { id: SLATE_NOIR_THEME_ID, label: 'Slate Noir', themeColor: '#141414' },
+  { id: ZEROBYTE_THEME_ID, label: 'Zerobyte', themeColor: '#0b0b0b' },
 ]
 export const DEFAULT_APPEARANCE: AppearancePreferences = { themeId: DEFAULT_THEME_ID }
 

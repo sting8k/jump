@@ -6,6 +6,7 @@
 @import './themes/vercel.css';
 @import './themes/hud.css';
 @import './themes/slate-noir.css';
+@import './themes/zerobyte.css';
 
 code {
   font-family: var(--font-mono);
