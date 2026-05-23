@@ -1,8 +1,6 @@
 name: PR Build
 
 on:
-  pull_request:
-    branches: [main]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -13,7 +11,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: pr-build-${{ inputs.pr_number || github.event.number }}
+  group: pr-build-${{ inputs.pr_number }}
   cancel-in-progress: true
 
 jobs:
@@ -24,13 +22,13 @@ jobs:
       contents: read
       pull-requests: write
     env:
-      PR: ${{ inputs.pr_number || github.event.number }}
+      PR: ${{ inputs.pr_number }}
     steps:
       # Resolve the PR head SHA explicitly so checkout pins to a commit
-      # a user can browse, not the synthetic refs/pull/N/merge ref that
-      # github computes for pull_request events. With rebase-merge as the
-      # project's merge policy, the head SHA is what lands on main, so
-      # the artifact's embedded version matches what'll be released.
+      # a user can browse, regardless of the ref used to dispatch this
+      # workflow. With rebase-merge as the project's merge policy, the
+      # head SHA is what lands on main, so the artifact's embedded version
+      # matches what'll be released.
       - name: Resolve PR head
         id: pr
         env:
@@ -68,11 +66,13 @@ jobs:
         with:
           go-version: "1.26"
 
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+
       - uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
           node-version: "22"
-
-      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install JS dependencies
         run: pnpm install --frozen-lockfile

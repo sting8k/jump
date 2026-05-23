@@ -5,7 +5,8 @@
 ```mermaid
 flowchart LR
   subgraph PR opened
-    A1[ci.yml] --- A2[pr-build.yml] --- A3[pr-title.yml]
+    A1[ci.yml] --- A3[pr-title.yml]
+    A2[pr-build.yml\nmanual/release only]
   end
 
   subgraph PR merged to main / release-PR-edited
@@ -22,12 +23,12 @@ flowchart LR
 
 ### 1. PR phase
 
-These workflows and external checks run when a PR targets `main`:
+These workflows and external checks run automatically when a PR targets `main`. `pr-build.yml` is available for opt-in artifact builds and is dispatched by `regen.yml` for the generated release PR:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
 | `ci.yml` | `pull_request` | Lint, build, test (JS + Go + release scripts) |
-| `pr-build.yml` | `pull_request` | Snapshot build via GoReleaser, upload artifacts, post install comment |
+| `pr-build.yml` | `workflow_dispatch` | Opt-in snapshot build via GoReleaser, upload artifacts, post install comment; `regen.yml` dispatches it for `release/next` |
 | `pr-title.yml` | `pull_request_target` | Validate PR title matches [conventional commits](https://www.conventionalcommits.org/) |
 | `regen.yml` | `pull_request` | No-op for non-`release/next` PRs; reports a status check so branch protection stays green |
 | Greptile GitHub App | `pull_request` | External AI review/status check configured by `.greptile/`; staged as non-required until release-PR skip behavior is verified |
@@ -124,7 +125,8 @@ All third-party actions are pinned to full commit SHAs to prevent supply-chain a
 
 ### Fork PR safety
 
-- `pull_request` triggers: run fork code but with a **read-only** `GITHUB_TOKEN` and **no access to secrets**. The comment step in `pr-build.yml` will fail silently for fork PRs.
+- `pull_request` triggers: run fork code but with a **read-only** `GITHUB_TOKEN` and **no access to secrets**.
+- `workflow_dispatch` (`pr-build.yml`): is opt-in and checks out the requested PR head to build artifacts. Do not manually dispatch it for untrusted fork code.
 - `pull_request_target` (`pr-title.yml`): runs **base branch code**, never checks out or executes fork code. Only reads the PR title via the API.
 - No workflow uses `pull_request_target` + `actions/checkout` with the PR ref (the known anti-pattern for secret exfiltration).
 
