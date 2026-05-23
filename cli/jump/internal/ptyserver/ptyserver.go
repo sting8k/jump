@@ -220,16 +220,17 @@ type Server struct {
 	state    *session.State
 	perf     *perfStats
 
-	mu             sync.Mutex
-	clients        map[*wsClient]struct{}
-	localOut       io.Writer          // optional local terminal output sink
-	scrollback     io.WriteCloser     // optional persistent scrollback sink (closed in waitChild)
-	ptyCols        uint16             // last applied PTY cols (guarded by mu)
-	ptyRows        uint16             // last applied PTY rows (guarded by mu)
-	cursorHidden   bool               // tracks DECTCEM via callback (guarded by mu)
-	activeModes    map[ansi.Mode]bool // app-enabled terminal modes replayed on reconnect (guarded by mu)
-	screenPending  []byte             // raw PTY data not yet fed to screen (guarded by mu)
-	lastClientLeft time.Time          // when the last WS client disconnected (guarded by mu)
+	mu                    sync.Mutex
+	clients               map[*wsClient]struct{}
+	localOut              io.Writer          // optional local terminal output sink
+	scrollback            io.WriteCloser     // optional persistent scrollback sink (closed in waitChild)
+	ptyCols               uint16             // last applied PTY cols (guarded by mu)
+	ptyRows               uint16             // last applied PTY rows (guarded by mu)
+	cursorHidden          bool               // tracks DECTCEM via callback (guarded by mu)
+	activeModes           map[ansi.Mode]bool // app-enabled terminal modes replayed on reconnect (guarded by mu)
+	screenPending         []byte             // raw PTY data not yet fed to screen (guarded by mu)
+	lastClientLeft        time.Time          // when the last WS client disconnected (guarded by mu)
+	suppressActivityUntil time.Time          // ignores redraws caused by reconnect resize/shrink (guarded by mu)
 
 	done    chan struct{} // closed when child exits
 	ptyDone chan struct{} // closed when readPTY finishes draining
@@ -893,7 +894,11 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 		delete(s.clients, client)
 		noClients := len(s.clients) == 0 && s.localOut == nil
 		if len(s.clients) == 0 {
-			s.lastClientLeft = time.Now()
+			now := time.Now()
+			s.lastClientLeft = now
+			if noClients {
+				s.suppressActivityUntil = now.Add(reconnectRedrawActivitySuppression)
+			}
 		}
 		s.mu.Unlock()
 
@@ -1063,6 +1068,12 @@ func (s *Server) enqueueToClients(clients []*wsClient, typ websocket.MessageType
 // switching when the old session briefly has zero clients.
 const activityGrace = 500 * time.Millisecond
 
+// reconnectRedrawActivitySuppression covers redraw output produced by the
+// deliberate shrink/reconnect resize cycle. That output is replay hygiene, not
+// new user-facing session output, so it must not resurrect unread/activity dots
+// after the user has just viewed the session.
+const reconnectRedrawActivitySuppression = 3 * time.Second
+
 // coalesceMaxBytes is the maximum accumulated data before forcing a flush,
 // even if the coalesce timer hasn't fired yet. Keeps latency bounded.
 const coalesceMaxBytes = 32 * 1024
@@ -1075,6 +1086,16 @@ const coalesceInteractiveInterval = 2 * time.Millisecond
 // coalesceBurstInterval keeps redraw-heavy TUIs batched below one 60 fps frame
 // (~16 ms), reducing WS message count during bursts such as SIGWINCH redraws.
 const coalesceBurstInterval = 8 * time.Millisecond
+
+func shouldEmitActivity(now time.Time, hasRemoteClients bool, lastClientLeft, suppressUntil time.Time) bool {
+	if hasRemoteClients {
+		return false
+	}
+	if !suppressUntil.IsZero() && now.Before(suppressUntil) {
+		return false
+	}
+	return lastClientLeft.IsZero() || now.Sub(lastClientLeft) > activityGrace
+}
 
 func coalesceDelay(bytes int) time.Duration {
 	if bytes <= coalesceInteractiveMaxBytes {
@@ -1127,15 +1148,16 @@ func (s *Server) readPTY() {
 		}
 		hasRemoteClients := len(clients) > 0
 		lastLeft := s.lastClientLeft
+		suppressUntil := s.suppressActivityUntil
 		s.mu.Unlock()
 
-		// Emit activity only when no client is viewing and the grace
-		// period has elapsed. The grace period suppresses false positives
-		// during session switching (brief disconnect window).
-		if !hasRemoteClients && s.state != nil {
-			if lastLeft.IsZero() || time.Since(lastLeft) > activityGrace {
-				s.state.EmitActivity()
-			}
+		// Emit activity only when no client is viewing and the grace/suppression
+		// windows have elapsed. The unread flag is the persistent source of
+		// truth; activity is only the short pulse layered on top of it.
+		now := time.Now()
+		if s.state != nil && shouldEmitActivity(now, hasRemoteClients, lastLeft, suppressUntil) {
+			s.state.SetUnread(true)
+			s.state.EmitActivity()
 		}
 
 		if localOut != nil {

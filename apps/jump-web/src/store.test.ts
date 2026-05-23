@@ -402,6 +402,28 @@ describe('activity tracking', () => {
     expect(isSessionFading('sess-1')).toBe(false)
   })
 
+  it('ignores activity for a read known session', () => {
+    sessions.value = [makeSession({ id: 'sess-1', unread: false })]
+    handleActivity('sess-1')
+    expect(isSessionActive('sess-1')).toBe(false)
+    expect(isSessionFading('sess-1')).toBe(false)
+  })
+
+  it('uses activity only to repulse an unread idle session', () => {
+    sessions.value = [makeSession({ id: 'sess-1', unread: true, status: null })]
+    const before = activityGeneration.value.get('sess-1') ?? 0
+    handleActivity('sess-1')
+    expect(activityGeneration.value.get('sess-1')).toBe(before + 1)
+  })
+
+  it('ignores activity while a session is still working', () => {
+    sessions.value = [makeSession({ id: 'sess-1', unread: true, status: { label: '', working: true } })]
+    handleActivity('sess-1')
+    expect(isSessionActive('sess-1')).toBe(false)
+    expect(isSessionFading('sess-1')).toBe(false)
+  })
+
+
   it('increments activity generation on each activity event', () => {
     const before = activityGeneration.value.get('sess-1') ?? 0
     handleActivity('sess-1')
@@ -415,8 +437,8 @@ describe('activity tracking', () => {
       { slug: 'other', match: [{ path: '/repo/other' }] },
     ]
     sessions.value = [
-      makeSession({ id: 'sess-tilth', cwd: '/repo/tilth' }),
-      makeSession({ id: 'sess-other', cwd: '/repo/other' }),
+      makeSession({ id: 'sess-tilth', cwd: '/repo/tilth', unread: true }),
+      makeSession({ id: 'sess-other', cwd: '/repo/other', unread: true }),
     ]
     handleActivity('sess-tilth')
     handleActivity('sess-other')

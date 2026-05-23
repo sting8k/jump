@@ -224,6 +224,11 @@ export function handleActivity(sessionId: string) {
     clearSessionActivity(sessionId)
     return
   }
+  const sess = sessions.value.find(s => s.id === sessionId)
+  if (sess && (!sess.alive || !sess.unread || sess.status?.working)) {
+    clearSessionActivity(sessionId)
+    return
+  }
   const t1 = _actTimers.get(sessionId)
   if (t1) clearTimeout(t1)
   const t2 = _fadeTimers.get(sessionId)

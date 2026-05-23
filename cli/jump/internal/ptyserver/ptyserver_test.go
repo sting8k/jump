@@ -1540,6 +1540,25 @@ func TestPTYServerShrinkForReconnect(t *testing.T) {
 	}
 }
 
+func TestShouldEmitActivitySuppressesReconnectRedraw(t *testing.T) {
+	now := time.Now()
+	lastLeft := now.Add(-time.Second)
+	suppressUntil := now.Add(time.Second)
+
+	if shouldEmitActivity(now, false, lastLeft, suppressUntil) {
+		t.Fatal("activity should be suppressed during reconnect redraw window")
+	}
+	if shouldEmitActivity(now, true, time.Time{}, time.Time{}) {
+		t.Fatal("activity should not emit while a remote client is attached")
+	}
+	if shouldEmitActivity(now, false, now.Add(-activityGrace/2), time.Time{}) {
+		t.Fatal("activity should respect disconnect grace window")
+	}
+	if !shouldEmitActivity(now, false, now.Add(-activityGrace-time.Millisecond), time.Time{}) {
+		t.Fatal("activity should emit after grace/suppression windows")
+	}
+}
+
 func countOccurrences(s, sub string) int {
 	n := 0
 	for i := 0; i <= len(s)-len(sub); i++ {
