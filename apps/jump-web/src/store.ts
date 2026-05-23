@@ -18,6 +18,16 @@ import type { Session, ProjectItem, DiscoveredProject, PeerInfo, LauncherDef, Fo
 import type { View } from './routing'
 import { resolveViewFromPath, viewToPath, sessionPath } from './routing'
 import { buildProjectFolders, matchSession } from './projects'
+import {
+  backgroundDotState,
+  sessionIdsInProject,
+  sessionDotState,
+  unreadSessionCount,
+  type ActivityState,
+  type DotState,
+} from './attention'
+export { sessionDotState }
+export type { DotState }
 
 import { fetchFrontendConfig, saveFrontendPreferences, buildTerminalOptions, resolveKeybinds, type ResolvedKeybind } from './config'
 import {
@@ -182,12 +192,12 @@ export const urlPath = signal(
  * cleaned up by timers; the map reference changes on every transition
  * so computed values that read it recompute.
  */
-export const activityMap = signal<ReadonlyMap<string, 'active' | 'fading'>>(new Map())
+export const activityMap = signal<ReadonlyMap<string, ActivityState>>(new Map())
 export const activityGeneration = signal<ReadonlyMap<string, number>>(new Map())
 
 // Internal mutable map + timers. We write to this and then publish a
 // new (frozen) snapshot to the signal so reads trigger recomputation.
-const _actMap = new Map<string, 'active' | 'fading'>()
+const _actMap = new Map<string, ActivityState>()
 const _actGeneration = new Map<string, number>()
 const _actTimers = new Map<string, ReturnType<typeof setTimeout>>()
 const _fadeTimers = new Map<string, ReturnType<typeof setTimeout>>()
@@ -302,33 +312,13 @@ export const currentProjectSlug = computed(() =>
 )
 
 /** Dot state for the mobile hamburger: summarizes background session activity. */
-export type DotState = 'working' | 'error' | 'unread' | 'active' | 'fading' | 'none'
-
-export function sessionDotState(session: Session, am: ReadonlyMap<string, 'active' | 'fading'>): DotState {
-  if (session.alive && session.status?.error)   return 'error'
-  if (session.alive && session.status?.working) return 'working'
-  if (session.unread) return 'unread'
-  const act = am.get(session.id)
-  if (act === 'active') return 'active'
-  if (act === 'fading') return 'fading'
-  return 'none'
-}
-
-export const backgroundActivity = computed((): DotState => {
-  const sel = selectedId.value
-  const am = activityMap.value
-  const others = sessions.value.filter(s => s.id !== sel && s.alive)
-  if (others.some(s => sessionDotState(s, am) === 'error'))   return 'error'
-  if (others.some(s => sessionDotState(s, am) === 'working')) return 'working'
-  if (others.some(s => sessionDotState(s, am) === 'unread'))  return 'unread'
-  if (others.some(s => sessionDotState(s, am) === 'active'))  return 'active'
-  if (others.some(s => sessionDotState(s, am) === 'fading'))  return 'fading'
-  return 'none'
-})
+export const backgroundActivity = computed((): DotState =>
+  backgroundDotState(sessions.value, activityMap.value, selectedId.value),
+)
 
 /** Count of unread sessions (excluding selected). */
 export const unreadCount = computed(() =>
-  sessions.value.filter(s => s.id !== selectedId.value && s.alive && s.unread).length,
+  unreadSessionCount(sessions.value, selectedId.value),
 )
 
 // ── Mutators ────────────────────────────────────────────────────────────────
@@ -442,9 +432,7 @@ export function removeSession(id: string) {
 }
 
 export function clearProjectActivity(projectSlug: string) {
-  const ids = sessions.value
-    .filter(s => matchSession(s, projects.value)?.slug === projectSlug)
-    .map(s => s.id)
+  const ids = sessionIdsInProject(sessions.value, projects.value, projectSlug)
   for (const id of ids) {
     if (activityMap.value.has(id)) clearSessionActivity(id)
   }

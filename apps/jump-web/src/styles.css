@@ -2957,10 +2957,33 @@ a.home-host-link:hover {
   width: 6px;
   height: 6px;
   border-radius: var(--radius);
-  background: var(--status-connected);
   flex-shrink: 0;
 }
+.session-card-dot.none { visibility: hidden; }
 .session-card-dot.dead { background: var(--text-muted); }
+.session-card-dot.working {
+  background: transparent;
+  border: 1.5px solid var(--accent);
+  animation: subtle-pulse 2.5s ease-in-out infinite;
+}
+.session-card-dot.active {
+  background: transparent;
+  border: 1.5px solid var(--active);
+  animation: subtle-pulse 3s ease-in-out infinite;
+}
+.session-card-dot.fading {
+  background: transparent;
+  border: 1.5px solid var(--active);
+  animation: dot-fade-out 800ms ease-out forwards;
+}
+.session-card-dot.unread { background: var(--unread); }
+.session-card-dot.error {
+  background: var(--status-error);
+  animation: subtle-pulse 2.5s ease-in-out infinite;
+}
+.session-card-dot.arriving {
+  animation: dot-arrival 360ms steps(2, jump-none) both;
+}
 .session-card-name {
   font-size: 13px;
   white-space: nowrap;

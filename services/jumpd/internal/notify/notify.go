@@ -264,35 +264,18 @@ func (r *Router) handleEvent(ev store.Event) {
 		return // new session, no transition to detect
 	}
 
-	// Transition: working → idle on a live session
-	if prev.Working && !cur.Working && cur.Alive {
-		body := formatFinishedBody(sess)
-		r.scheduleNotification(sess, "finished", sess.Title, body)
-	}
-
-	// Transition: unread flipped on
-	if !prev.Unread && cur.Unread {
-		body := "New output"
-		if sess.Status != nil && sess.Status.Label != "" {
-			body = sess.Status.Label
-		}
-		r.scheduleNotification(sess, "unread", sess.Title, body)
+	for _, intent := range sessionNotificationIntents(prev, cur, sess) {
+		r.scheduleNotification(sess, string(intent.kind), intent.title, intent.body)
 	}
 }
 
 func (r *Router) handleActivity(sessionID string) {
-	if sessionID == "" || r.presence.AnyViewing(sessionID) {
+	if sessionID == "" {
 		return
 	}
 
 	sess, ok := r.sessions.Get(sessionID)
-	if !ok || !sess.Alive || !sess.Unread {
-		return
-	}
-	if sess.Status != nil && sess.Status.Working {
-		// Active runners can emit activity for every output chunk. Let the
-		// finished transition notify instead of pinging repeatedly while work is
-		// still in progress.
+	if !ok || !activityNotificationAllowed(sess, r.presence.AnyViewing(sessionID)) {
 		return
 	}
 
@@ -352,10 +335,10 @@ func (r *Router) scheduleNotification(sess store.Session, notifType, title, body
 	// If the user is already looking at this session, the regular UI state is
 	// enough. If jump is focused elsewhere, route to an in-app toast instead of
 	// dropping the event or escalating to an OS notification.
-	if r.presence.AnyViewing(sessionID) {
+	switch notificationDeliveryModeFor(r.presence.AnyViewing(sessionID), r.presence.AnyFocused()) {
+	case deliverySuppress:
 		return
-	}
-	if r.presence.AnyFocused() {
+	case deliveryFocused:
 		if !r.allowDelivery(sessionID, workspaceLabel(sess), time.Now()) {
 			return
 		}
@@ -369,6 +352,7 @@ func (r *Router) scheduleNotification(sess store.Session, notifType, title, body
 			workspace: workspaceLabel(sess),
 		})
 		return
+	case deliveryDeferred:
 	}
 
 	r.mu.Lock()
@@ -468,7 +452,7 @@ func (r *Router) firePending(sessionID string) {
 	r.mu.Unlock()
 
 	// Re-check: user may have focused jump during the grace period.
-	if r.presence.AnyFocused() || r.presence.AnyViewing(sessionID) {
+	if notificationDeliveryModeFor(r.presence.AnyViewing(sessionID), r.presence.AnyFocused()) != deliveryDeferred {
 		return
 	}
 	if !r.allowDelivery(sessionID, p.workspace, time.Now()) {

@@ -9,8 +9,10 @@ import type { HostNode } from './projects'
 import { buildProjectTopology } from './projects'
 import { sessionPath } from './routing'
 import { LaunchButton } from './launcher'
-import { sessions, projects, peers } from './store'
+import { useArrivalPulse } from './use-arrival-pulse'
+import { activityGeneration, activityMap, selectedId, sessionDotState, sessions, projects, peers } from './store'
 import { PeerLabel } from './peer-label'
+import type { DotState } from './attention'
 
 function projectRemote(p: ProjectItem | undefined): string | undefined {
   return p?.match.find(r => r.remote)?.remote
@@ -29,6 +31,9 @@ export function ProjectHub({ projectSlug, onCloseSession }: ProjectHubProps) {
   const projectsVal = projects.value
   const project = projectsVal.find(p => p.slug === projectSlug)
   const hosts = buildProjectTopology(projectSlug, sessions.value, projectsVal, peers.value)
+  const am = activityMap.value
+  const activityGen = activityGeneration.value
+  const selId = selectedId.value
   const remote = projectRemote(project)
 
   const totalSessions = hosts.reduce(
@@ -61,6 +66,9 @@ export function ProjectHub({ projectSlug, onCloseSession }: ProjectHubProps) {
               key={host.path.join('\0') || '(local)'}
               host={host}
               projectSlug={projectSlug}
+              selectedId={selId}
+              activityMap={am}
+              activityGeneration={activityGen}
               onCloseSession={onCloseSession}
             />
           ))}
@@ -83,8 +91,15 @@ function EmptyProject({ projectSlug, launchCwd }: { projectSlug: string; launchC
 }
 
 function HostGroup({
-  host, projectSlug, onCloseSession,
-}: { host: HostNode; projectSlug: string; onCloseSession: (session: Session) => void }) {
+  host, projectSlug, selectedId, activityMap, activityGeneration, onCloseSession,
+}: {
+  host: HostNode
+  projectSlug: string
+  selectedId: string | null
+  activityMap: ReadonlyMap<string, 'active' | 'fading'>
+  activityGeneration: ReadonlyMap<string, number>
+  onCloseSession: (session: Session) => void
+}) {
   const sessionCount = host.folders.reduce((n, f) => n + f.sessions.length, 0)
   const canLaunch = host.path.length <= 1
   const launchPeer = host.path.length === 1 ? host.path[0] : undefined
@@ -108,6 +123,8 @@ function HostGroup({
                 key={s.id}
                 session={s}
                 projectSlug={projectSlug}
+                dotState={sessionDotState(s, activityMap, { selected: selectedId === s.id })}
+                activityGeneration={activityGeneration.get(s.id) ?? 0}
                 onClose={() => onCloseSession(s)}
               />
             ))}
@@ -137,9 +154,16 @@ function HostPath({ path }: { path: string[] }) {
 }
 
 function SessionCard({
-  session, projectSlug, onClose,
-}: { session: Session; projectSlug: string; onClose: () => void }) {
-  const dotClass = session.alive ? '' : 'dead'
+  session, projectSlug, dotState, activityGeneration, onClose,
+}: {
+  session: Session
+  projectSlug: string
+  dotState: DotState
+  activityGeneration: number
+  onClose: () => void
+}) {
+  const arrival = useArrivalPulse(dotState, activityGeneration)
+  const dotClass = session.alive ? `${dotState}${arrival ? ` ${arrival}` : ''}` : 'dead'
   const name = session.title || session.kind
   const href = sessionPath(projectSlug, session)
   return (

@@ -117,8 +117,7 @@ function SessionItem({
   session,
   href,
   selected,
-  resuming,
-  dotState: rawDotState,
+  dotState,
   activityGeneration: activityPulseGeneration,
   dragging,
   dropTarget,
@@ -131,7 +130,6 @@ function SessionItem({
   session: Session
   href: string
   selected: boolean
-  resuming?: boolean
   dotState: DotState
   activityGeneration?: number
   dragging?: boolean
@@ -143,10 +141,6 @@ function SessionItem({
   onDragOver?: () => void
   onDragEnd?: () => void
 }) {
-  const effectiveDotState = resuming ? 'working' : rawDotState
-  // Nothing is "attention" if you're already looking at it. Keep working
-  // visible because it is live state, not an attention badge.
-  const dotState = (selected && effectiveDotState !== 'working') ? 'none' : effectiveDotState
   const arrival = useArrivalPulse(dotState, activityPulseGeneration)
   const sleeping = !session.alive && session.resumable
   const memory = formatSessionMemory(session.memory_rss_bytes)
@@ -279,8 +273,10 @@ function FolderGroup({
             session={s}
             href={sessionPath(folder.path, s)}
             selected={selId === s.id}
-            resuming={resumingId === s.id}
-            dotState={sessionDotState(s, am)}
+            dotState={sessionDotState(s, am, {
+              selected: selId === s.id,
+              resuming: resumingId === s.id,
+            })}
             activityGeneration={activityGen.get(s.id) ?? 0}
             dragging={drag !== null && s.id === visible[drag.from]?.id}
             dropTarget={drag !== null && drag.over === i && drag.from !== i}
