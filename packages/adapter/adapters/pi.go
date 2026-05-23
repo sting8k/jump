@@ -259,8 +259,12 @@ func (p *Pi) ParseNewLines(lines []string, filePath string) []adapter.Event {
 		case "message":
 			var msg struct {
 				Message *struct {
-					Role       string `json:"role"`
-					StopReason string `json:"stopReason"`
+					Role            string `json:"role"`
+					StopReason      string `json:"stopReason"`
+					StopReasonSnake string `json:"stop_reason"`
+					Content         []struct {
+						Type string `json:"type"`
+					} `json:"content"`
 				} `json:"message"`
 			}
 			if err := json.Unmarshal([]byte(line), &msg); err != nil || msg.Message == nil {
@@ -275,44 +279,60 @@ func (p *Pi) ParseNewLines(lines []string, filePath string) []adapter.Event {
 				})
 
 			case "assistant":
-				switch msg.Message.StopReason {
-				case "toolUse":
-					// Assistant wants to call tools — agent loop continues.
-					events = append(events, adapter.Event{
-						Status: &adapter.Status{Working: true},
-					})
-				case "stop":
-					// Assistant finished its turn — clear status, mark unread.
-					events = append(events, adapter.Event{
-						Status: &adapter.Status{},
-						Unread: adapter.BoolPtr(true),
-					})
-				case "aborted":
-					// User pressed Esc to cancel — agent is idle.
-					events = append(events, adapter.Event{
-						Status: &adapter.Status{},
-					})
-				case "error":
-					// Errors are often transient (overloaded, rate-limited)
-					// and pi retries automatically. While retries are
-					// pending, don't change state (stay working). When
-					// retries are exhausted, signal error so the frontend
-					// can show a red dot.
-					if filePath != "" {
-						count, cwd := countTrailingErrors(filePath)
-						if count >= piMaxRetries(cwd) {
-							// Retries exhausted — agent gave up.
-							events = append(events, adapter.Event{
-								Status: &adapter.Status{Error: true},
-							})
-						}
-					}
-					// Unknown stopReasons: no state change.
+				stopReason := msg.Message.StopReason
+				if stopReason == "" {
+					stopReason = msg.Message.StopReasonSnake
+				}
+				if evt, ok := piAssistantStatusEvent(stopReason, msg.Message.Content, filePath); ok {
+					events = append(events, evt)
 				}
 			}
 		}
 	}
 	return events
+}
+
+func piAssistantStatusEvent(stopReason string, content []struct {
+	Type string `json:"type"`
+}, filePath string) (adapter.Event, bool) {
+	hasToolUse := false
+	hasText := false
+	for _, block := range content {
+		switch block.Type {
+		case "toolUse", "toolCall", "tool_use":
+			hasToolUse = true
+		case "text":
+			hasText = true
+		}
+	}
+
+	switch stopReason {
+	case "toolUse", "tool_use":
+		return adapter.Event{Status: &adapter.Status{Working: true}}, true
+	case "stop", "end_turn":
+		return adapter.Event{Status: &adapter.Status{}, Unread: adapter.BoolPtr(true)}, true
+	case "aborted", "stop_sequence":
+		return adapter.Event{Status: &adapter.Status{}}, true
+	case "error":
+		if filePath != "" {
+			count, cwd := countTrailingErrors(filePath)
+			if count >= piMaxRetries(cwd) {
+				return adapter.Event{Status: &adapter.Status{Error: true}}, true
+			}
+		}
+		return adapter.Event{}, false
+	}
+
+	// Newer pi session files can omit a terminal stop reason and instead look
+	// like Claude-style streaming records. In that shape, tool calls mean the
+	// loop is still running; text without a tool call is the final response.
+	if hasToolUse {
+		return adapter.Event{Status: &adapter.Status{Working: true}}, true
+	}
+	if hasText {
+		return adapter.Event{Status: &adapter.Status{}, Unread: adapter.BoolPtr(true)}, true
+	}
+	return adapter.Event{}, false
 }
 
 // piDefaultMaxRetries is the fallback when settings can't be read.
@@ -453,10 +473,41 @@ func ListSessionFiles(dir string) []string {
 // JSONL.
 func (p *Pi) AttributeFile(filePath string, candidates []adapter.FileCandidate) string {
 	fileText, err := extractPiText(filePath)
+	if err == nil {
+		if id := attributeByScrollbackNormalized(fileText, candidates); id != "" {
+			return id
+		}
+	}
+
+	info, err := p.ParseSessionFile(filePath)
 	if err != nil {
 		return ""
 	}
-	return attributeByScrollbackNormalized(fileText, candidates)
+	if id := attributeByMetadata(info, candidates); id != "" {
+		return id
+	}
+	return attributeByRecentUniqueCwd(info, filePath, candidates)
+}
+
+func attributeByRecentUniqueCwd(info *adapter.SessionFileInfo, filePath string, candidates []adapter.FileCandidate) string {
+	if info == nil || info.Cwd == "" {
+		return ""
+	}
+	fileInfo, err := os.Stat(filePath)
+	if err != nil || time.Since(fileInfo.ModTime()) > 15*time.Minute {
+		return ""
+	}
+	var match string
+	for _, c := range candidates {
+		if paths.NormalizePath(c.Cwd) != paths.NormalizePath(info.Cwd) {
+			continue
+		}
+		if match != "" {
+			return ""
+		}
+		match = c.SessionID
+	}
+	return match
 }
 
 // extractPiText reads the tail of a pi JSONL session file and extracts

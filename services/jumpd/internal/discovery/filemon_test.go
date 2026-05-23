@@ -1412,6 +1412,134 @@ func TestApplyPersistedAttributionsPopulatesSlugAfterRestart(t *testing.T) {
 	}
 }
 
+func TestProcessAttributedFileFullReadRecoversUnreadForWorkingSession(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "pi-session.jsonl")
+	now := time.Now()
+	content := `{"type":"session","version":3,"id":"pi-uuid","timestamp":"` + now.Format(time.RFC3339Nano) + `","cwd":"/tmp"}
+{"type":"message","message":{"role":"assistant","stop_reason":null,"content":[{"type":"text","text":"Done."}]}}
+`
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := store.New()
+	s.Upsert(store.Session{ID: "sess-runner", Cwd: "/tmp", Kind: "pi", Alive: true, Status: &store.Status{Working: true}, StartedAt: now.UTC().Format(time.RFC3339)})
+	fm := NewFileMonitorWithAttributions(s, nil)
+	if fm.watcher != nil {
+		fm.watcher.Close()
+		fm.watcher = nil
+	}
+	pi := adapters.NewPi()
+	fm.sessions["sess-runner"] = &monitoredSession{id: "sess-runner", cwd: "/tmp", kind: "pi", adapter: pi, fileMon: pi, filer: pi, readAll: true}
+
+	fm.mu.Lock()
+	fm.processAttributedFileLocked("sess-runner", filePath)
+	fm.mu.Unlock()
+
+	post, _ := s.Get("sess-runner")
+	if post.Status != nil {
+		t.Fatalf("Status after full read = %+v, want nil", post.Status)
+	}
+	if !post.Unread {
+		t.Fatal("expected unread=true after full read completes a previously-working session")
+	}
+}
+
+func TestApplyPersistedAttributionsReconcilesPiStatusAfterRestart(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Now()
+
+	filePath := filepath.Join(dir, "pi-session.jsonl")
+	content := `{"type":"session","version":3,"id":"pi-uuid","timestamp":"` + now.Format(time.RFC3339Nano) + `","cwd":"/tmp"}
+{"type":"message","id":"u1","message":{"role":"user","content":[{"type":"text","text":"fix it"}]}}
+{"type":"message","id":"a1","message":{"role":"assistant","stop_reason":null,"content":[{"type":"text","text":"Done."}]}}
+`
+	if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := store.New()
+	s.Upsert(store.Session{
+		ID:        "sess-runner",
+		Cwd:       "/tmp",
+		Kind:      "pi",
+		Alive:     true,
+		Status:    &store.Status{Working: true},
+		StartedAt: now.UTC().Format(time.RFC3339),
+	})
+
+	fm := NewFileMonitorWithAttributions(s, map[string]string{filePath: "sess-runner"})
+	if fm.watcher != nil {
+		fm.watcher.Close()
+		fm.watcher = nil
+	}
+	pi := adapters.NewPi()
+	fm.sessions["sess-runner"] = &monitoredSession{
+		id:      "sess-runner",
+		cwd:     "/tmp",
+		kind:    "pi",
+		adapter: pi,
+		fileMon: pi,
+		filer:   pi,
+	}
+
+	fm.ApplyPersistedAttributions()
+
+	post, _ := s.Get("sess-runner")
+	if post.Status != nil {
+		t.Fatalf("Status after apply = %+v, want nil", post.Status)
+	}
+	if !post.Unread {
+		t.Fatal("expected unread=true when a previously-working session reconciles to completed")
+	}
+}
+
+func TestApplyPersistedAttributionsUsesLatestFilePerSession(t *testing.T) {
+	dir := t.TempDir()
+	oldFile := filepath.Join(dir, "old.jsonl")
+	newFile := filepath.Join(dir, "new.jsonl")
+	now := time.Now()
+
+	oldContent := `{"type":"session","version":3,"id":"old","timestamp":"` + now.Add(-time.Hour).Format(time.RFC3339Nano) + `","cwd":"/tmp"}
+{"type":"message","message":{"role":"user","content":[{"type":"text","text":"work"}]}}
+`
+	newContent := `{"type":"session","version":3,"id":"new","timestamp":"` + now.Format(time.RFC3339Nano) + `","cwd":"/tmp"}
+{"type":"message","message":{"role":"assistant","stop_reason":null,"content":[{"type":"text","text":"Done."}]}}
+`
+	if err := os.WriteFile(oldFile, []byte(oldContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(newFile, []byte(newContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	oldTime := now.Add(-time.Hour)
+	if err := os.Chtimes(oldFile, oldTime, oldTime); err != nil {
+		t.Fatal(err)
+	}
+
+	s := store.New()
+	s.Upsert(store.Session{ID: "sess-runner", Cwd: "/tmp", Kind: "pi", Alive: true, Status: &store.Status{Working: true}, StartedAt: now.UTC().Format(time.RFC3339)})
+
+	fm := NewFileMonitorWithAttributions(s, map[string]string{oldFile: "sess-runner", newFile: "sess-runner"})
+	if fm.watcher != nil {
+		fm.watcher.Close()
+		fm.watcher = nil
+	}
+	pi := adapters.NewPi()
+	fm.sessions["sess-runner"] = &monitoredSession{id: "sess-runner", cwd: "/tmp", kind: "pi", adapter: pi, fileMon: pi, filer: pi}
+
+	fm.ApplyPersistedAttributions()
+
+	post, _ := s.Get("sess-runner")
+	if post.Status != nil {
+		t.Fatalf("Status after apply = %+v, want nil from newest file", post.Status)
+	}
+	if !post.Unread {
+		t.Fatal("expected unread=true from newest file")
+	}
+}
+
 // TestApplyPersistedAttributionsSkipsUnknownSession ensures stale
 // attribution entries (pointing at sessions that didn't re-register
 // after restart, e.g. dismissed or runner died) don't cause panics

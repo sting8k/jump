@@ -198,9 +198,22 @@ function publishActivity() {
   activityMap.value = new Map(_actMap)
   activityGeneration.value = new Map(_actGeneration)
 }
+export function clearSessionActivity(sessionId: string) {
+  const t1 = _actTimers.get(sessionId)
+  if (t1) { clearTimeout(t1); _actTimers.delete(sessionId) }
+  const t2 = _fadeTimers.get(sessionId)
+  if (t2) { clearTimeout(t2); _fadeTimers.delete(sessionId) }
+  _actMap.delete(sessionId)
+  publishActivity()
+}
+
 
 export function handleActivity(sessionId: string) {
   // Clear existing timers for this session.
+  if (selectedId.value === sessionId) {
+    clearSessionActivity(sessionId)
+    return
+  }
   const t1 = _actTimers.get(sessionId)
   if (t1) clearTimeout(t1)
   const t2 = _fadeTimers.get(sessionId)
@@ -428,7 +441,18 @@ export function removeSession(id: string) {
   publishActivity()
 }
 
+export function clearProjectActivity(projectSlug: string) {
+  const ids = sessions.value
+    .filter(s => matchSession(s, projects.value)?.slug === projectSlug)
+    .map(s => s.id)
+  for (const id of ids) {
+    if (activityMap.value.has(id)) clearSessionActivity(id)
+  }
+}
+
+
 export function markSessionRead(id: string) {
+  clearSessionActivity(id)
   sessions.value = sessions.value.map(s =>
     s.id === id
       ? { ...s, unread: false, status: s.status?.error ? { ...s.status, error: false } : s.status }
@@ -875,15 +899,27 @@ export function initStore(): () => void {
   })
   cleanups.push(disposeUrlNorm)
 
-  // Mark-as-read effect: clear unread/error flags when viewing a session.
+  // Mark-as-read effect: clear attention flags when viewing a session.
   const disposeMarkRead = effect(() => {
     const id = selectedId.value
     const sess = selected.value
     if (!id || !sess) return
+    if (activityMap.value.has(id)) {
+      clearSessionActivity(id)
+    }
     if (sess.unread || sess.status?.error) {
       markSessionRead(id)
     }
   })
+
+  // Project hub is foreground for transient activity in that workspace.
+  // Do not mark sessions read here; clear only active/fading animation.
+  const disposeClearProjectActivity = effect(() => {
+    const slug = currentProjectSlug.value
+    if (!slug) return
+    clearProjectActivity(slug)
+  })
+  cleanups.push(disposeClearProjectActivity)
   cleanups.push(disposeMarkRead)
 
   return () => cleanups.forEach(fn => fn())

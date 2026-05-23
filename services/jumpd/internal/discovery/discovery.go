@@ -105,8 +105,8 @@ func Scan(sessions *store.Store, subs *Subscriptions, fileMon *FileMonitor, onDe
 			continue
 		}
 		sockPath := filepath.Join(dir, entry.Name())
-		if tracked, ok := trackedSockets[sockPath]; ok && tracked.Alive {
-			continue // already tracked as live
+		if tracked, ok := trackedSockets[sockPath]; ok && tracked.Alive && subs != nil && subs.IsActive(tracked.ID) {
+			continue // already tracked by this daemon as live
 		}
 		if err := Register(sessions, subs, fileMon, sockPath, onDead); err != nil {
 			// Only remove sockets old enough to be genuinely stale.

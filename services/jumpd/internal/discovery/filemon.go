@@ -627,6 +627,13 @@ func (fm *FileMonitor) processAttributedFileLocked(sessionID, path string) {
 		return
 	}
 
+	recoverUnread := false
+	if readAll {
+		if sess, ok := fm.store.Get(sessionID); ok {
+			recoverUnread = sess.Status != nil && sess.Status.Working
+		}
+	}
+
 	// Extract the canonical cwd from the first event that carries one.
 	// Only applied on the initial full read (first attribution): session
 	// file cwds are immutable, so re-applying on every write is redundant.
@@ -656,7 +663,7 @@ func (fm *FileMonitor) processAttributedFileLocked(sessionID, path string) {
 					}
 				}
 			}
-			if evt.Unread != nil && !readAll {
+			if evt.Unread != nil && (!readAll || recoverUnread) {
 				sess.Unread = *evt.Unread
 			}
 		}
@@ -716,6 +723,48 @@ func (fm *FileMonitor) syncFileMetadataLocked(sessionID, filePath string) {
 	})
 }
 
+func (fm *FileMonitor) reconcileFileStatusLocked(sessionID, filePath string) {
+	ms, ok := fm.sessions[sessionID]
+	if !ok {
+		return
+	}
+
+	sess, ok := fm.store.Get(sessionID)
+	if !ok {
+		return
+	}
+	recoverUnread := sess.Status != nil && sess.Status.Working
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return
+	}
+	lines := strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n")
+	events := ms.fileMon.ParseNewLines(lines, filePath)
+	if len(events) == 0 {
+		return
+	}
+
+	fm.store.Update(sessionID, func(sess *store.Session) {
+		for _, evt := range events {
+			if evt.Status != nil {
+				if evt.Status.Label == "" && !evt.Status.Working && !evt.Status.Error {
+					sess.Status = nil
+				} else {
+					sess.Status = &store.Status{
+						Label:   evt.Status.Label,
+						Working: evt.Status.Working,
+						Error:   evt.Status.Error,
+					}
+				}
+			}
+			if recoverUnread && evt.Unread != nil {
+				sess.Unread = *evt.Unread
+			}
+		}
+	})
+}
+
 // persistAttributionsLocked writes the current attributions to disk.
 func (fm *FileMonitor) persistAttributionsLocked() {
 	saveAttributions(fm.attributions, fm.sessions)
@@ -745,12 +794,28 @@ func (fm *FileMonitor) ApplyPersistedAttributions() {
 	fm.mu.Lock()
 	defer fm.mu.Unlock()
 
-	var applied int
+	type attributedFile struct {
+		path    string
+		modTime time.Time
+	}
+	latest := make(map[string]attributedFile)
 	for path, sessionID := range fm.attributions {
 		if _, ok := fm.sessions[sessionID]; !ok {
 			continue
 		}
-		fm.syncFileMetadataLocked(sessionID, path)
+		info, err := os.Stat(path)
+		if err != nil {
+			continue
+		}
+		if cur, ok := latest[sessionID]; !ok || info.ModTime().After(cur.modTime) {
+			latest[sessionID] = attributedFile{path: path, modTime: info.ModTime()}
+		}
+	}
+
+	var applied int
+	for sessionID, file := range latest {
+		fm.syncFileMetadataLocked(sessionID, file.path)
+		fm.reconcileFileStatusLocked(sessionID, file.path)
 		applied++
 	}
 	if applied > 0 {

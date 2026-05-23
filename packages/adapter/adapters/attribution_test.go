@@ -206,6 +206,66 @@ func TestPiAttributeFileContentMatch(t *testing.T) {
 	}
 }
 
+func TestPiAttributeFileUniqueCwdFallback(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/pi.jsonl"
+	if err := writeFile(path, `{"type":"session","id":"pi-1","cwd":"/repo/tilth","timestamp":"2026-05-21T13:15:21Z"}
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}
+`); err != nil {
+		t.Fatal(err)
+	}
+
+	pi := NewPi()
+	id := pi.AttributeFile(path, []adapter.FileCandidate{
+		{SessionID: "other", Cwd: "/repo/gmux", StartedAt: time.Now(), Scrollback: ""},
+		{SessionID: "tilth", Cwd: "/repo/tilth", StartedAt: time.Now().Add(24 * time.Hour), Scrollback: ""},
+	})
+	if id != "tilth" {
+		t.Fatalf("AttributeFile = %q, want tilth", id)
+	}
+}
+
+func TestPiAttributeFileUniqueCwdFallbackRejectsOldFile(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/pi.jsonl"
+	if err := writeFile(path, `{"type":"session","id":"pi-1","cwd":"/repo/tilth","timestamp":"2026-05-21T13:15:21Z"}
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}
+`); err != nil {
+		t.Fatal(err)
+	}
+	old := time.Now().Add(-time.Hour)
+	if err := os.Chtimes(path, old, old); err != nil {
+		t.Fatal(err)
+	}
+
+	pi := NewPi()
+	id := pi.AttributeFile(path, []adapter.FileCandidate{
+		{SessionID: "tilth", Cwd: "/repo/tilth", StartedAt: time.Now(), Scrollback: ""},
+	})
+	if id != "" {
+		t.Fatalf("AttributeFile = %q, want empty for old unique-cwd fallback", id)
+	}
+}
+
+func TestPiAttributeFileUniqueCwdFallbackRejectsAmbiguous(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/pi.jsonl"
+	if err := writeFile(path, `{"type":"session","id":"pi-1","cwd":"/repo/tilth","timestamp":"2026-05-21T13:15:21Z"}
+{"type":"message","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}
+`); err != nil {
+		t.Fatal(err)
+	}
+
+	pi := NewPi()
+	id := pi.AttributeFile(path, []adapter.FileCandidate{
+		{SessionID: "a", Cwd: "/repo/tilth", StartedAt: time.Now(), Scrollback: ""},
+		{SessionID: "b", Cwd: "/repo/tilth", StartedAt: time.Now(), Scrollback: ""},
+	})
+	if id != "" {
+		t.Fatalf("AttributeFile = %q, want empty for ambiguous cwd", id)
+	}
+}
+
 func TestPiAttributeFileNoScrollback(t *testing.T) {
 	// No scrollback available: return "" (session may be idle or just started).
 	candidates := []adapter.FileCandidate{

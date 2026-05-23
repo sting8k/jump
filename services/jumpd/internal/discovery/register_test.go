@@ -186,6 +186,37 @@ func TestRegisterFreshSessionRunsOnRegisterForShell(t *testing.T) {
 	}
 }
 
+func TestScanReregistersAliveNoSub(t *testing.T) {
+	srv := startUnixServer(t, metaHandler(store.Session{
+		ID:    "sess-restart",
+		Kind:  "pi",
+		Cwd:   t.TempDir(),
+		Alive: true,
+		Pid:   12345,
+	}))
+	defer srv.cleanup()
+
+	t.Setenv("JUMP_SOCKET_DIR", filepath.Dir(srv.socketPath))
+
+	sessions := store.New()
+	sessions.Upsert(store.Session{
+		ID:         "sess-restart",
+		Kind:       "pi",
+		Alive:      true,
+		SocketPath: srv.socketPath,
+		Status:     &store.Status{Working: true},
+	})
+
+	subs := NewSubscriptions(sessions)
+	t.Cleanup(func() { subs.UnsubscribeAll() })
+
+	Scan(sessions, subs, nil, nil)
+
+	if !subs.IsActive("sess-restart") {
+		t.Fatal("expected Scan to re-register persisted live session into this daemon's subscriptions")
+	}
+}
+
 func TestScanReregistersTrackedDeadSocket(t *testing.T) {
 	srv := startUnixServer(t, metaHandler(store.Session{
 		ID:    "sess-orphan",

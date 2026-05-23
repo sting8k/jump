@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { sessions, sessionsLoaded, projects, upsertSession, removeSession, markSessionRead, handleActivity, isSessionActive, isSessionFading, activityMap, activityGeneration, sessionStaleness, peers, peerAppearance, urlPath, selectedId, navigateToSession, setNavigate, launchSession, removeProject, health, startHealthRefresh, HEALTH_REFRESH_MS, HEALTH_REFRESH_SETTLE_MS, appearance, setThemeId, notificationPreferences, setNotificationPreferences, initStore } from './store'
+import { sessions, sessionsLoaded, projects, upsertSession, removeSession, markSessionRead, handleActivity, isSessionActive, isSessionFading, activityMap, activityGeneration, clearProjectActivity, sessionStaleness, peers, peerAppearance, urlPath, selectedId, navigateToSession, setNavigate, launchSession, removeProject, health, startHealthRefresh, HEALTH_REFRESH_MS, HEALTH_REFRESH_SETTLE_MS, appearance, setThemeId, notificationPreferences, setNotificationPreferences, initStore } from './store'
 import { APPEARANCE_STORAGE_KEY } from './appearance'
 import { DEFAULT_NOTIFICATION_PREFERENCES } from './notifications'
 import type { Session } from './types'
@@ -408,6 +408,25 @@ describe('activity tracking', () => {
     handleActivity('sess-1')
     expect(activityGeneration.value.get('sess-1')).toBe(before + 2)
   })
+
+  it('clears activity for sessions in a viewed project only', () => {
+    projects.value = [
+      { slug: 'tilth', match: [{ path: '/repo/tilth' }] },
+      { slug: 'other', match: [{ path: '/repo/other' }] },
+    ]
+    sessions.value = [
+      makeSession({ id: 'sess-tilth', cwd: '/repo/tilth' }),
+      makeSession({ id: 'sess-other', cwd: '/repo/other' }),
+    ]
+    handleActivity('sess-tilth')
+    handleActivity('sess-other')
+
+    clearProjectActivity('tilth')
+
+    expect(isSessionActive('sess-tilth')).toBe(false)
+    expect(isSessionActive('sess-other')).toBe(true)
+  })
+
 
   it('cleans activity state when a session is removed', () => {
     sessions.value = [makeSession({ id: 'sess-1' })]
