@@ -144,6 +144,61 @@ func TestDerivedResumable_ShellIsResumable(t *testing.T) {
 	}
 }
 
+func TestAttentionLifecycleStatusAndUnread(t *testing.T) {
+	sess := Session{ID: "s1", Alive: true}
+
+	sess.ApplyAttentionStatus(&Status{Working: true})
+	if sess.Status == nil || !sess.Status.Working {
+		t.Fatalf("working status not applied: %+v", sess.Status)
+	}
+
+	unread := true
+	sess.ApplyAttentionUpdate(&Status{}, &unread, true)
+	if sess.Status != nil {
+		t.Fatalf("idle status should clear, got %+v", sess.Status)
+	}
+	if !sess.Unread {
+		t.Fatal("expected unread after done update")
+	}
+
+	sess.ApplyAttentionStatus(&Status{Error: true})
+	if sess.Status == nil || !sess.Status.Error {
+		t.Fatalf("error status not applied: %+v", sess.Status)
+	}
+	if !sess.MarkAttentionRead() {
+		t.Fatal("expected MarkAttentionRead to report changed")
+	}
+	if sess.Unread {
+		t.Fatal("expected unread cleared")
+	}
+	if sess.Status != nil {
+		t.Fatalf("expected error-only status cleared, got %+v", sess.Status)
+	}
+}
+
+func TestAttentionLifecycleReadKeepsWorking(t *testing.T) {
+	sess := Session{ID: "s1", Alive: true, Unread: true, Status: &Status{Working: true, Error: true}}
+
+	if !sess.MarkAttentionRead() {
+		t.Fatal("expected MarkAttentionRead to report changed")
+	}
+	if sess.Unread {
+		t.Fatal("expected unread cleared")
+	}
+	if sess.Status == nil || !sess.Status.Working || sess.Status.Error {
+		t.Fatalf("expected working status preserved with error cleared, got %+v", sess.Status)
+	}
+}
+
+func TestAttentionLifecycleCanSuppressHistoricalUnread(t *testing.T) {
+	sess := Session{ID: "s1", Alive: true}
+	unread := true
+	sess.ApplyAttentionUpdate(&Status{}, &unread, false)
+	if sess.Unread {
+		t.Fatal("expected historical unread to be suppressed")
+	}
+}
+
 func TestUpdateAtomic(t *testing.T) {
 	s := New()
 	s.Upsert(Session{ID: "s1", Kind: "pi", AdapterTitle: "original"})

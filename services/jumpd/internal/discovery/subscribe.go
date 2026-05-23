@@ -222,7 +222,7 @@ func (sub *Subscriptions) handleEvent(sessionID, socketPath, eventType string, d
 			return
 		}
 		sub.store.Update(sessionID, func(sess *store.Session) {
-			sess.Status = &status
+			sess.ApplyAttentionStatus(&status)
 		})
 
 	case "meta":
@@ -248,10 +248,7 @@ func (sub *Subscriptions) handleEvent(sessionID, socketPath, eventType string, d
 				sess.Subtitle = *meta.Subtitle
 			}
 			if meta.Unread != nil {
-				sess.Unread = *meta.Unread
-				if !*meta.Unread && sess.Status != nil && sess.Status.Error {
-					sess.Status.Error = false
-				}
+				sess.ApplyAttentionUnread(*meta.Unread)
 			}
 			if meta.Slug != nil && *meta.Slug != "" {
 				sess.Slug = *meta.Slug
@@ -283,9 +280,9 @@ func (sub *Subscriptions) handleEvent(sessionID, socketPath, eventType string, d
 		}
 		if !resumed {
 			if exit.ExitCode == 0 {
-				sess.Status = nil // clean exit — no label needed
+				sess.ClearAttentionStatus() // clean exit — no label needed
 			} else {
-				sess.Status = &store.Status{Label: fmt.Sprintf("exited (%d)", exit.ExitCode)}
+				sess.ApplyAttentionStatus(&store.Status{Label: fmt.Sprintf("exited (%d)", exit.ExitCode)})
 			}
 		}
 		sub.store.Upsert(sess)

@@ -601,6 +601,17 @@ func (fm *FileMonitor) handleFileChange(path string) {
 // processAttributedFileLocked reads new lines from an attributed file
 // and applies title/status/unread updates to the session. Must be
 // called with fm.mu held.
+func storeAttentionStatus(status *adapter.Status) *store.Status {
+	if status == nil {
+		return nil
+	}
+	return &store.Status{
+		Label:   status.Label,
+		Working: status.Working,
+		Error:   status.Error,
+	}
+}
+
 func (fm *FileMonitor) processAttributedFileLocked(sessionID, path string) {
 	ms, ok := fm.sessions[sessionID]
 	if !ok {
@@ -652,20 +663,7 @@ func (fm *FileMonitor) processAttributedFileLocked(sessionID, path string) {
 			if evt.Title != "" {
 				sess.AdapterTitle = evt.Title
 			}
-			if evt.Status != nil {
-				if evt.Status.Label == "" && !evt.Status.Working && !evt.Status.Error {
-					sess.Status = nil
-				} else {
-					sess.Status = &store.Status{
-						Label:   evt.Status.Label,
-						Working: evt.Status.Working,
-						Error:   evt.Status.Error,
-					}
-				}
-			}
-			if evt.Unread != nil && (!readAll || recoverUnread) {
-				sess.Unread = *evt.Unread
-			}
+			sess.ApplyAttentionUpdate(storeAttentionStatus(evt.Status), evt.Unread, !readAll || recoverUnread)
 		}
 		if newCwd != "" {
 			sess.Cwd = newCwd
@@ -747,20 +745,7 @@ func (fm *FileMonitor) reconcileFileStatusLocked(sessionID, filePath string) {
 
 	fm.store.Update(sessionID, func(sess *store.Session) {
 		for _, evt := range events {
-			if evt.Status != nil {
-				if evt.Status.Label == "" && !evt.Status.Working && !evt.Status.Error {
-					sess.Status = nil
-				} else {
-					sess.Status = &store.Status{
-						Label:   evt.Status.Label,
-						Working: evt.Status.Working,
-						Error:   evt.Status.Error,
-					}
-				}
-			}
-			if recoverUnread && evt.Unread != nil {
-				sess.Unread = *evt.Unread
-			}
+			sess.ApplyAttentionUpdate(storeAttentionStatus(evt.Status), evt.Unread, recoverUnread)
 		}
 	})
 }
