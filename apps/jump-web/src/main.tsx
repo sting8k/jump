@@ -10,6 +10,7 @@ import { useArrivalPulse } from './use-arrival-pulse'
 import { Sidebar } from './sidebar'
 import type { DotState } from './store'
 import { usePresence } from './use-presence'
+import type { NotifyMessage } from './presence'
 
 import type { Session } from './types'
 import { ManageProjectsModal } from './manage-projects'
@@ -562,6 +563,38 @@ function MobileTerminalBar({
 
 // ── App ──
 
+function NotificationToasts({
+  notifications,
+  onActivate,
+  onDismiss,
+}: {
+  notifications: NotifyMessage[]
+  onActivate: (msg: NotifyMessage) => void
+  onDismiss: (id: string) => void
+}) {
+  if (notifications.length === 0) return null
+
+  return (
+    <div class="notification-toasts" role="status" aria-live="polite">
+      {notifications.map(n => (
+        <div class="notification-toast" key={n.id}>
+          <button class="notification-toast-main" onClick={() => onActivate(n)}>
+            <span class="notification-toast-title">{n.title}</span>
+            <span class="notification-toast-body">{n.body}</span>
+          </button>
+          <button
+            class="notification-toast-dismiss"
+            onClick={() => onDismiss(n.id)}
+            aria-label="Dismiss notification"
+          >
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function App() {
   // Visual viewport tracking for keyboard-aware layout.
   useEffect(() => {
@@ -629,7 +662,7 @@ function App() {
     setTerminalFontSize(current => saveTerminalFontSize(adjustTerminalFontSize(current, delta)))
   }, [])
 
-  usePresence()
+  const presenceState = usePresence()
 
   // ── Resume ──
   const [resumingId, setResumingId] = useState<string | null>(null)
@@ -735,6 +768,12 @@ function App() {
       <ManageProjectsModal
         open={manageProjectsOpen}
         onClose={() => setManageProjectsOpen(false)}
+      />
+
+      <NotificationToasts
+        notifications={presenceState.inAppNotifications}
+        onActivate={presenceState.activateInAppNotification}
+        onDismiss={presenceState.dismissInAppNotification}
       />
 
       <div class="main-panel">

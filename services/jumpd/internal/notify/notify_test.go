@@ -36,7 +36,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	p := presence.New(presence.Callbacks{
 		OnClientFocused: func(_ string) {
 			if router != nil {
-				router.CancelAllPending()
+				router.CancelAll()
 			}
 		},
 		OnSessionSelected: func(_, sessID string) {
@@ -133,7 +133,7 @@ func TestTransition_UnreadFlip_SchedulesNotification(t *testing.T) {
 	}
 }
 
-func TestNoNotification_WhenFocused(t *testing.T) {
+func TestNoOSNotification_WhenFocused(t *testing.T) {
 	env := newTestEnv(t)
 	env.addClient("c1", "desktop")
 	env.presence.Update("c1", presence.ClientState{
@@ -151,7 +151,47 @@ func TestNoNotification_WhenFocused(t *testing.T) {
 	env.router.mu.Unlock()
 
 	if hasPending {
-		t.Fatal("should not schedule notification when a client is focused")
+		t.Fatal("should not schedule OS notification when a client is focused")
+	}
+}
+
+func TestInAppNotification_WhenFocusedElsewhere(t *testing.T) {
+	env := newTestEnv(t)
+	env.addClient("c1", "desktop")
+	env.presence.Update("c1", presence.ClientState{
+		Focused:           true,
+		SelectedSessionID: "other",
+		LastInteraction:   nowSecs(),
+	})
+
+	env.upsertSession("s1", true, false, true)
+	time.Sleep(20 * time.Millisecond)
+	env.upsertSession("s1", false, false, true)
+	time.Sleep(20 * time.Millisecond)
+
+	env.router.mu.Lock()
+	pendingCount := len(env.router.pending)
+	activeCount := len(env.router.active)
+	env.router.mu.Unlock()
+
+	if pendingCount != 0 {
+		t.Fatal("focused in-app path should not schedule an OS notification")
+	}
+	if activeCount != 1 {
+		t.Fatalf("expected one active in-app notification, got %d", activeCount)
+	}
+
+	env.presence.Update("c1", presence.ClientState{
+		Focused:           true,
+		SelectedSessionID: "s1",
+		LastInteraction:   nowSecs(),
+	})
+
+	env.router.mu.Lock()
+	activeAfterSelect := len(env.router.active)
+	env.router.mu.Unlock()
+	if activeAfterSelect != 0 {
+		t.Fatal("selecting the session should cancel active in-app notification")
 	}
 }
 
@@ -261,6 +301,74 @@ func TestCancelForSession_OnSelect(t *testing.T) {
 
 	if stillPending {
 		t.Fatal("pending notification should have been cancelled when session selected")
+	}
+}
+
+func TestAck_RemovesActiveNotification(t *testing.T) {
+	env := newTestEnv(t)
+	env.addClient("c1", "desktop")
+	env.presence.Update("c1", presence.ClientState{
+		Focused:         false,
+		LastInteraction: nowSecs(),
+	})
+
+	env.upsertSession("s1", true, false, true)
+	time.Sleep(20 * time.Millisecond)
+	env.upsertSession("s1", false, false, true)
+	time.Sleep(90 * time.Millisecond)
+
+	var notifID string
+	env.router.mu.Lock()
+	for id := range env.router.active {
+		notifID = id
+		break
+	}
+	env.router.mu.Unlock()
+
+	if notifID == "" {
+		t.Fatal("expected active notification after grace period")
+	}
+
+	env.router.Ack(notifID)
+
+	env.router.mu.Lock()
+	_, stillActive := env.router.active[notifID]
+	env.router.mu.Unlock()
+	if stillActive {
+		t.Fatal("ack should remove active notification")
+	}
+}
+
+func TestCancelAll_OnFocusCancelsActiveNotification(t *testing.T) {
+	env := newTestEnv(t)
+	env.addClient("c1", "desktop")
+	env.presence.Update("c1", presence.ClientState{
+		Focused:         false,
+		LastInteraction: nowSecs(),
+	})
+
+	env.upsertSession("s1", true, false, true)
+	time.Sleep(20 * time.Millisecond)
+	env.upsertSession("s1", false, false, true)
+	time.Sleep(90 * time.Millisecond)
+
+	env.router.mu.Lock()
+	activeBefore := len(env.router.active)
+	env.router.mu.Unlock()
+	if activeBefore == 0 {
+		t.Fatal("expected active notification before focus")
+	}
+
+	env.presence.Update("c1", presence.ClientState{
+		Focused:         true,
+		LastInteraction: nowSecs(),
+	})
+
+	env.router.mu.Lock()
+	activeAfter := len(env.router.active)
+	env.router.mu.Unlock()
+	if activeAfter != 0 {
+		t.Fatal("focus should cancel active notifications")
 	}
 }
 

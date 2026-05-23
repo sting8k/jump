@@ -64,6 +64,20 @@ func TestAnyViewing(t *testing.T) {
 	}
 }
 
+func TestFocusedClients(t *testing.T) {
+	tbl := New(Callbacks{})
+	tbl.Add(nilClient("a", "desktop", "granted", nowSecs()))
+	tbl.Add(nilClient("b", "mobile", "granted", nowSecs()))
+
+	tbl.Update("a", ClientState{Focused: true})
+	tbl.Update("b", ClientState{Focused: false})
+
+	focused := tbl.FocusedClients()
+	if len(focused) != 1 || focused[0].ID != "a" {
+		t.Fatalf("focused clients = %#v, want only a", focused)
+	}
+}
+
 func TestBestNotifyTarget_NoGranted(t *testing.T) {
 	tbl := New(Callbacks{})
 	tbl.Add(nilClient("a", "desktop", "default", nowSecs()))

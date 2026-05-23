@@ -7,10 +7,12 @@ import { addPageResumeListener } from './page-resume'
 export interface NotifyMessage {
   type: 'notify'
   id: string
-  session_id: string
+  session_id?: string
   title: string
   body: string
   tag: string
+  channel?: 'os' | 'in_app'
+  navigate_url?: string
 }
 
 export interface CancelMessage {
@@ -28,6 +30,7 @@ export interface ClientState {
 export interface PresenceConnection {
   sendState(state: ClientState): void
   sendPermission(permission: string): void
+  sendNotificationAck(id: string, action: 'clicked' | 'closed'): void
   close(): void
 }
 
@@ -118,6 +121,11 @@ export function connectPresence(options: {
     sendPermission(permission: string) {
       if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'notif-permission', permission }))
+      }
+    },
+    sendNotificationAck(id: string, action: 'clicked' | 'closed') {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'notif-ack', id, action }))
       }
     },
     close() {

@@ -33,12 +33,14 @@ func DefaultConfig() Config {
 
 // NotifyMessage is sent to the browser over the presence WebSocket.
 type NotifyMessage struct {
-	Type      string `json:"type"` // "notify"
-	ID        string `json:"id"`   // daemon-assigned notification ID
-	SessionID string `json:"session_id"`
-	Title     string `json:"title"`
-	Body      string `json:"body"`
-	Tag       string `json:"tag"`
+	Type        string `json:"type"` // "notify"
+	ID          string `json:"id"`   // daemon-assigned notification ID
+	SessionID   string `json:"session_id,omitempty"`
+	Title       string `json:"title"`
+	Body        string `json:"body"`
+	Tag         string `json:"tag"`
+	Channel     string `json:"channel,omitempty"`      // "os" | "in_app"
+	NavigateURL string `json:"navigate_url,omitempty"` // optional click target for summary notifications
 }
 
 // CancelMessage tells the browser to dismiss a notification.
@@ -198,11 +200,14 @@ func formatDuration(d time.Duration) string {
 }
 
 func (r *Router) scheduleNotification(sessionID, notifType, title, body string) {
-	// Skip if user is viewing this session or focused on jump.
+	// If the user is already looking at this session, the regular UI state is
+	// enough. If jump is focused elsewhere, route to an in-app toast instead of
+	// dropping the event or escalating to an OS notification.
 	if r.presence.AnyViewing(sessionID) {
 		return
 	}
 	if r.presence.AnyFocused() {
+		r.fireInApp(sessionID, notifType, title, body)
 		return
 	}
 
@@ -234,6 +239,44 @@ func (r *Router) scheduleNotification(sessionID, notifType, title, body string) 
 	})
 
 	r.pending[sessionID] = p
+}
+
+func (r *Router) fireInApp(sessionID, notifType, title, body string) {
+	targets := r.presence.FocusedClients()
+	if len(targets) == 0 {
+		return
+	}
+
+	notifID := func() string {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		return r.genID()
+	}()
+
+	r.mu.Lock()
+	r.active[notifID] = activeNotif{sessionID: sessionID}
+	r.mu.Unlock()
+
+	msg := NotifyMessage{
+		Type:      "notify",
+		ID:        notifID,
+		SessionID: sessionID,
+		Title:     title,
+		Body:      body,
+		Tag:       sessionID,
+		Channel:   "in_app",
+	}
+
+	for _, target := range targets {
+		sendJSON(target.Conn, msg)
+	}
+	log.Printf("notify: sent in-app %s for session %s (%s) to %d focused clients", notifID, sessionID, notifType, len(targets))
+
+	time.AfterFunc(30*time.Second, func() {
+		r.mu.Lock()
+		delete(r.active, notifID)
+		r.mu.Unlock()
+	})
 }
 
 func (r *Router) firePending(sessionID string) {
@@ -281,6 +324,7 @@ func (r *Router) firePending(sessionID string) {
 		Title:     p.title,
 		Body:      p.body,
 		Tag:       sessionID,
+		Channel:   "os",
 	}
 
 	r.mu.Lock()
@@ -313,25 +357,57 @@ func (r *Router) fireCoalesced(count int) {
 	}()
 
 	msg := NotifyMessage{
-		Type:  "notify",
-		ID:    notifID,
-		Title: "jump",
-		Body:  fmt.Sprintf("%d sessions finished", count),
-		Tag:   "coalesced",
+		Type:        "notify",
+		ID:          notifID,
+		Title:       "jump",
+		Body:        fmt.Sprintf("%d sessions need attention", count),
+		Tag:         "coalesced",
+		Channel:     "os",
+		NavigateURL: "/",
 	}
+
+	r.mu.Lock()
+	r.active[notifID] = activeNotif{clientID: target.ID}
+	r.mu.Unlock()
 
 	sendJSON(target.Conn, msg)
 	log.Printf("notify: sent coalesced notification (%d sessions) to client %s", count, target.ID)
+
+	time.AfterFunc(5*time.Minute, func() {
+		r.mu.Lock()
+		delete(r.active, notifID)
+		r.mu.Unlock()
+	})
 }
 
-// CancelAllPending cancels all pending notifications (e.g. user focused jump).
-func (r *Router) CancelAllPending() {
+// CancelAll cancels pending and active notifications (e.g. user focused jump).
+func (r *Router) CancelAll() {
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	for sid, p := range r.pending {
 		p.timer.Stop()
 		delete(r.pending, sid)
 	}
+
+	var cancelIDs []string
+	for nid := range r.active {
+		cancelIDs = append(cancelIDs, nid)
+		delete(r.active, nid)
+	}
+	r.mu.Unlock()
+
+	for _, nid := range cancelIDs {
+		r.broadcastCancel(nid)
+	}
+}
+
+// Ack removes an active notification after the browser reports click/close.
+func (r *Router) Ack(notifID string) {
+	if notifID == "" {
+		return
+	}
+	r.mu.Lock()
+	delete(r.active, notifID)
+	r.mu.Unlock()
 }
 
 // CancelForSession cancels a pending or active notification for a session

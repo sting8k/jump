@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'preact/hooks'
 import { connectPresence } from './presence'
 import type { NotifyMessage, CancelMessage } from './presence'
-import { selectedId, sessions, navigateToSession } from './store'
+import { selectedId, sessions, navigateToSession, navigate } from './store'
 
 const USE_MOCK = import.meta.env.VITE_MOCK === '1' || location.search.includes('mock')
 
@@ -18,6 +18,9 @@ type NotifPermission = 'default' | 'granted' | 'denied' | 'unavailable'
 interface UsePresenceResult {
   notifPermission: NotifPermission
   requestNotifPermission: () => void
+  inAppNotifications: NotifyMessage[]
+  activateInAppNotification: (msg: NotifyMessage) => void
+  dismissInAppNotification: (id: string) => void
 }
 
 export function usePresence(): UsePresenceResult {
@@ -26,12 +29,52 @@ export function usePresence(): UsePresenceResult {
   const lastInteractionRef = useRef(Date.now() / 1000)
 
   const [, forceNotifPermUpdate] = useState(0)
+  const [inAppNotifications, setInAppNotifications] = useState<NotifyMessage[]>([])
   const notifPermission: NotifPermission = USE_MOCK
     ? 'granted'
     : ('Notification' in window ? Notification.permission : 'unavailable')
 
+  const ackNotification = useCallback((id: string, action: 'clicked' | 'closed') => {
+    presenceRef.current?.sendNotificationAck(id, action)
+  }, [])
+
+  const routeNotification = useCallback((msg: NotifyMessage) => {
+    window.focus()
+    if (msg.navigate_url) {
+      navigate(msg.navigate_url)
+    } else if (msg.session_id) {
+      navigateToSession(msg.session_id)
+    }
+  }, [])
+
+  const dismissInAppNotification = useCallback((id: string) => {
+    setInAppNotifications(prev => prev.filter(n => n.id !== id))
+    ackNotification(id, 'closed')
+  }, [ackNotification])
+
+  const activateInAppNotification = useCallback((msg: NotifyMessage) => {
+    routeNotification(msg)
+    setInAppNotifications(prev => prev.filter(n => n.id !== msg.id))
+    ackNotification(msg.id, 'clicked')
+  }, [ackNotification, routeNotification])
+
   // Show a notification when the daemon tells us to.
   const handleNotify = useCallback((msg: NotifyMessage) => {
+    if (msg.channel === 'in_app') {
+      setInAppNotifications(prev => [
+        ...prev.filter(n => n.id !== msg.id && n.tag !== msg.tag),
+        msg,
+      ].slice(-3))
+      window.setTimeout(() => {
+        setInAppNotifications(prev => {
+          if (!prev.some(n => n.id === msg.id)) return prev
+          ackNotification(msg.id, 'closed')
+          return prev.filter(n => n.id !== msg.id)
+        })
+      }, 8_000)
+      return
+    }
+
     if (!('Notification' in window) || Notification.permission !== 'granted') return
     const n = new Notification(msg.title, {
       body: msg.body,
@@ -39,16 +82,20 @@ export function usePresence(): UsePresenceResult {
       icon: '/favicon.svg',
     })
     activeNotifsRef.current.set(msg.id, n)
-    n.onclose = () => activeNotifsRef.current.delete(msg.id)
+    n.onclose = () => {
+      activeNotifsRef.current.delete(msg.id)
+      ackNotification(msg.id, 'closed')
+    }
     n.onclick = () => {
-      window.focus()
-      if (msg.session_id) navigateToSession(msg.session_id)
+      routeNotification(msg)
+      ackNotification(msg.id, 'clicked')
       n.close()
     }
-  }, [])
+  }, [ackNotification, routeNotification])
 
   // Dismiss a notification when the daemon tells us to.
   const handleCancel = useCallback((msg: CancelMessage) => {
+    setInAppNotifications(prev => prev.filter(n => n.id !== msg.id))
     const n = activeNotifsRef.current.get(msg.id)
     if (n) { n.close(); activeNotifsRef.current.delete(msg.id) }
   }, [])
@@ -115,5 +162,11 @@ export function usePresence(): UsePresenceResult {
     presenceRef.current?.sendPermission(Notification.permission)
   }, [])
 
-  return { notifPermission, requestNotifPermission }
+  return {
+    notifPermission,
+    requestNotifPermission,
+    inAppNotifications,
+    activateInAppNotification,
+    dismissInAppNotification,
+  }
 }

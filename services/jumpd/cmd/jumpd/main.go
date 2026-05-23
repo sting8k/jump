@@ -542,7 +542,7 @@ func serve(stderr io.Writer) int {
 	presenceTable := presence.New(presence.Callbacks{
 		OnClientFocused: func(clientID string) {
 			if notifRouter != nil {
-				notifRouter.CancelAllPending()
+				notifRouter.CancelAll()
 			}
 		},
 		OnSessionSelected: func(clientID, sessionID string) {
@@ -1483,6 +1483,8 @@ func serve(stderr io.Writer) int {
 				SelectedSessionID string  `json:"selected_session_id"`
 				LastInteraction   float64 `json:"last_interaction"`
 				Permission        string  `json:"permission"`
+				ID                string  `json:"id"`
+				Action            string  `json:"action"`
 			}
 			if err := json.Unmarshal(data, &msg); err != nil {
 				continue
@@ -1497,6 +1499,10 @@ func serve(stderr io.Writer) int {
 				})
 			case "notif-permission":
 				presenceTable.SetPermission(clientID, msg.Permission)
+			case "notif-ack":
+				if notifRouter != nil {
+					notifRouter.Ack(msg.ID)
+				}
 			}
 		}
 	})

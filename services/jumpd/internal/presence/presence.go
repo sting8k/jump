@@ -140,6 +140,20 @@ func (t *Table) Conns() []*websocket.Conn {
 	return conns
 }
 
+// FocusedClients returns a snapshot of clients whose jump tab is focused.
+// Safe to use for writes outside the lock.
+func (t *Table) FocusedClients() []*Client {
+	t.mu.RLock()
+	defer t.mu.RUnlock()
+	clients := make([]*Client, 0, len(t.clients))
+	for _, c := range t.clients {
+		if c.Focused {
+			clients = append(clients, c)
+		}
+	}
+	return clients
+}
+
 // BestNotifyTarget returns the connected client most likely to reach the user,
 // or nil if no client can show notifications.
 //
