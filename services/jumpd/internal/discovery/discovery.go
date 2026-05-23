@@ -147,7 +147,7 @@ func Scan(sessions *store.Store, subs *Subscriptions, fileMon *FileMonitor, onDe
 		}
 		// Socket gone or unresponsive — mark dead.
 		s.Alive = false
-		s.ClearAttentionStatus()
+		s.ClearAttentionStatusFrom("discovery/prune")
 		if fileMon != nil {
 			if cmd := fileMon.ResolveResumeCommand(&s); cmd != nil {
 				s.Command = cmd
@@ -226,9 +226,9 @@ func Register(sessions *store.Store, subs *Subscriptions, fileMon *FileMonitor, 
 		existing.ExitedAt = newSess.ExitedAt
 		existing.ExitCode = newSess.ExitCode
 		if newSess.Status == nil {
-			existing.ClearAttentionStatus()
+			existing.ClearAttentionStatusFrom("discovery/register")
 		} else {
-			existing.ApplyAttentionStatus(newSess.Status)
+			existing.ApplyAttentionStatusFrom("discovery/register", newSess.Status)
 		}
 		existing.BinaryHash = newSess.BinaryHash
 		existing.RunnerVersion = newSess.RunnerVersion

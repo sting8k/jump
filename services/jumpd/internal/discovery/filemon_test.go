@@ -1412,6 +1412,71 @@ func TestApplyPersistedAttributionsPopulatesSlugAfterRestart(t *testing.T) {
 	}
 }
 
+func TestAttentionPipelinePiWorkingFinishRead(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "pi-session.jsonl")
+	now := time.Now()
+	userLine := "{\"type\":\"message\",\"message\":{\"role\":\"user\",\"content\":[{\"type\":\"text\",\"text\":\"go\"}]}}\n"
+	if err := os.WriteFile(filePath, []byte(userLine), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := store.New()
+	s.Upsert(store.Session{ID: "sess-runner", Cwd: "/tmp", Kind: "pi", Alive: true, StartedAt: now.UTC().Format(time.RFC3339)})
+	fm := NewFileMonitorWithAttributions(s, nil)
+	if fm.watcher != nil {
+		fm.watcher.Close()
+		fm.watcher = nil
+	}
+	pi := adapters.NewPi()
+	fm.sessions["sess-runner"] = &monitoredSession{id: "sess-runner", cwd: "/tmp", kind: "pi", adapter: pi, fileMon: pi, filer: pi, readAll: false}
+
+	fm.mu.Lock()
+	fm.processAttributedFileLocked("sess-runner", filePath)
+	fm.mu.Unlock()
+
+	working, _ := s.Get("sess-runner")
+	if working.Status == nil || !working.Status.Working {
+		t.Fatalf("after user event status = %+v, want working", working.Status)
+	}
+	if working.Unread {
+		t.Fatal("user event should not mark unread")
+	}
+
+	assistantLine := "{\"type\":\"message\",\"message\":{\"role\":\"assistant\",\"stopReason\":\"stop\",\"content\":[{\"type\":\"text\",\"text\":\"Done.\"}]}}\n"
+	f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.WriteString(assistantLine); err != nil {
+		f.Close()
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	fm.mu.Lock()
+	fm.processAttributedFileLocked("sess-runner", filePath)
+	fm.mu.Unlock()
+
+	done, _ := s.Get("sess-runner")
+	if done.Status != nil {
+		t.Fatalf("after assistant stop status = %+v, want idle", done.Status)
+	}
+	if !done.Unread {
+		t.Fatal("assistant stop should mark unread for background session")
+	}
+
+	s.Update("sess-runner", func(sess *store.Session) {
+		sess.MarkAttentionReadFrom("test/read")
+	})
+	read, _ := s.Get("sess-runner")
+	if read.Unread || read.Status != nil {
+		t.Fatalf("after read status=%+v unread=%v, want idle/read", read.Status, read.Unread)
+	}
+}
+
 func TestProcessAttributedFileIncrementalPiStopMarksUnread(t *testing.T) {
 	dir := t.TempDir()
 	filePath := filepath.Join(dir, "pi-session.jsonl")

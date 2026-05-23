@@ -663,7 +663,7 @@ func (fm *FileMonitor) processAttributedFileLocked(sessionID, path string) {
 			if evt.Title != "" {
 				sess.AdapterTitle = evt.Title
 			}
-			sess.ApplyAttentionUpdate(storeAttentionStatus(evt.Status), evt.Unread, !readAll || recoverUnread)
+			sess.ApplyAttentionUpdateFrom("filemon/process", storeAttentionStatus(evt.Status), evt.Unread, !readAll || recoverUnread)
 		}
 		if newCwd != "" {
 			sess.Cwd = newCwd
@@ -745,7 +745,7 @@ func (fm *FileMonitor) reconcileFileStatusLocked(sessionID, filePath string) {
 
 	fm.store.Update(sessionID, func(sess *store.Session) {
 		for _, evt := range events {
-			sess.ApplyAttentionUpdate(storeAttentionStatus(evt.Status), evt.Unread, recoverUnread)
+			sess.ApplyAttentionUpdateFrom("filemon/reconcile", storeAttentionStatus(evt.Status), evt.Unread, recoverUnread)
 		}
 	})
 }

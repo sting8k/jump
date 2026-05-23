@@ -498,7 +498,7 @@ func serve(stderr io.Writer) int {
 	subs.OnExit = func(sess *store.Session) bool {
 		if cmd := fileMon.ResolveResumeCommand(sess); cmd != nil {
 			sess.Command = cmd
-			sess.ClearAttentionStatus() // clear exit status for clean resumable display
+			sess.ClearAttentionStatusFrom("runner/resume") // clear exit status for clean resumable display
 			return true
 		}
 		return false
@@ -1324,7 +1324,7 @@ func serve(stderr io.Writer) int {
 				if err := discovery.KillSession(sess.SocketPath); err != nil {
 					log.Printf("kill: %s: runner unreachable, forcing dead: %v", sessionID, err)
 					sess.Alive = false
-					sess.ClearAttentionStatus()
+					sess.ClearAttentionStatusFrom("session/delete")
 					if fileMon != nil {
 						if cmd := fileMon.ResolveResumeCommand(&sess); cmd != nil {
 							sess.Command = cmd
@@ -1350,7 +1350,7 @@ func serve(stderr io.Writer) int {
 				log.Printf("read: clearing attention for %s (%s)", sessionID, sess.Title)
 			}
 			sessions.Update(sessionID, func(sess *store.Session) {
-				sess.MarkAttentionRead()
+				sess.MarkAttentionReadFrom("read")
 			})
 			writeJSON(w, map[string]any{"ok": true, "data": map[string]any{}})
 
