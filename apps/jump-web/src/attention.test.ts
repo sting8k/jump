@@ -37,11 +37,12 @@ describe('attention model', () => {
     expect(sessionDotState(makeSession({ id: 'sess-1', status: { label: 'failed', working: false, error: true } }), am)).toBe('error')
   })
 
-  it('suppresses attention for the selected session but keeps working visible', () => {
+  it('suppresses all dots for the selected session', () => {
     const am = new Map<string, 'active' | 'fading'>()
 
     expect(sessionDotState(makeSession({ id: 'sess-1', unread: true }), am, { selected: true })).toBe('none')
-    expect(sessionDotState(makeSession({ id: 'sess-1', status: { label: '', working: true } }), am, { selected: true })).toBe('working')
+    expect(sessionDotState(makeSession({ id: 'sess-1', status: { label: '', working: true } }), am, { selected: true })).toBe('none')
+    expect(sessionDotState(makeSession({ id: 'sess-1' }), am, { selected: true, resuming: true })).toBe('none')
   })
 
   it('keeps background unread visible when another session is selected', () => {

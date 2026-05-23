@@ -30,12 +30,8 @@ export function sessionDotState(
   activity: ReadonlyMap<string, ActivityState>,
   opts: SessionDotOptions = {},
 ): DotState {
-  const state = opts.resuming ? 'working' : baseSessionDotState(session, activity)
-
-  // Foreground session attention is consumed by the terminal itself. Keep
-  // working visible because it is live execution state, not just a badge.
-  if (opts.selected && state !== 'working') return 'none'
-  return state
+  if (opts.selected) return 'none'
+  return opts.resuming ? 'working' : baseSessionDotState(session, activity)
 }
 
 export function summarizeDotStates(states: Iterable<DotState>): DotState {
