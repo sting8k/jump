@@ -5,10 +5,13 @@ package hostmetrics
 import "testing"
 
 func TestParseVMStat(t *testing.T) {
-	pageSize, freePages, err := parseVMStat(`Mach Virtual Memory Statistics: (page size of 16384 bytes)
+	pageSize, availablePages, err := parseVMStat(`Mach Virtual Memory Statistics: (page size of 16384 bytes)
 Pages free:                               100.
 Pages active:                             200.
+Pages inactive:                           300.
 Pages speculative:                         25.
+Pages wired down:                         400.
+Pages occupied by compressor:              50.
 `)
 	if err != nil {
 		t.Fatal(err)
@@ -16,8 +19,8 @@ Pages speculative:                         25.
 	if pageSize != 16384 {
 		t.Fatalf("pageSize = %d, want 16384", pageSize)
 	}
-	if freePages != 125 {
-		t.Fatalf("freePages = %d, want 125", freePages)
+	if availablePages != 425 {
+		t.Fatalf("availablePages = %d, want 425", availablePages)
 	}
 }
 

@@ -51,14 +51,14 @@ func memoryUsage(ctx context.Context) (MemoryUsage, error) {
 	if err != nil {
 		return MemoryUsage{}, err
 	}
-	pageSize, freePages, err := parseVMStat(string(vmOut))
+	pageSize, availablePages, err := parseVMStat(string(vmOut))
 	if err != nil {
 		return MemoryUsage{}, err
 	}
-	free := freePages * pageSize
+	available := availablePages * pageSize
 	used := total
-	if free < total {
-		used = total - free
+	if available < total {
+		used = total - available
 	}
 	return MemoryUsage{UsedBytes: used, TotalBytes: total}, nil
 }
@@ -93,7 +93,7 @@ func run(ctx context.Context, name string, args ...string) ([]byte, error) {
 	return exec.CommandContext(ctx, name, args...).Output()
 }
 
-func parseVMStat(out string) (pageSize, freePages uint64, err error) {
+func parseVMStat(out string) (pageSize, availablePages uint64, err error) {
 	for _, line := range strings.Split(out, "\n") {
 		if strings.Contains(line, "page size of") {
 			fields := strings.Fields(line)
@@ -109,7 +109,7 @@ func parseVMStat(out string) (pageSize, freePages uint64, err error) {
 			continue
 		}
 		label = strings.TrimSpace(label)
-		if label != "Pages free" && label != "Pages speculative" {
+		if label != "Pages free" && label != "Pages speculative" && label != "Pages inactive" {
 			continue
 		}
 		v := strings.Trim(strings.TrimSpace(value), ".")
@@ -117,10 +117,10 @@ func parseVMStat(out string) (pageSize, freePages uint64, err error) {
 		if parseErr != nil {
 			return 0, 0, parseErr
 		}
-		freePages += pages
+		availablePages += pages
 	}
 	if pageSize == 0 {
 		return 0, 0, fmt.Errorf("vm_stat page size missing")
 	}
-	return pageSize, freePages, nil
+	return pageSize, availablePages, nil
 }
