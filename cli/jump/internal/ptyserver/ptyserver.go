@@ -228,9 +228,10 @@ type Server struct {
 	ptyRows               uint16             // last applied PTY rows (guarded by mu)
 	cursorHidden          bool               // tracks DECTCEM via callback (guarded by mu)
 	activeModes           map[ansi.Mode]bool // app-enabled terminal modes replayed on reconnect (guarded by mu)
-	screenPending         []byte             // raw PTY data not yet fed to screen (guarded by mu)
-	lastClientLeft        time.Time          // when the last WS client disconnected (guarded by mu)
-	suppressActivityUntil time.Time          // ignores redraws caused by reconnect resize/shrink (guarded by mu)
+	terminalColors        terminalColorTracker
+	screenPending         []byte    // raw PTY data not yet fed to screen (guarded by mu)
+	lastClientLeft        time.Time // when the last WS client disconnected (guarded by mu)
+	suppressActivityUntil time.Time // ignores redraws caused by reconnect resize/shrink (guarded by mu)
 
 	done    chan struct{} // closed when child exits
 	ptyDone chan struct{} // closed when readPTY finishes draining
@@ -867,11 +868,12 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// the scrollback history followed by the visible screen as ANSI
 	// sequences with style diffing.
 	//
-	// Sequence: BSU → input modes → reset → scrollback + screen → cursor → ESU
+	// Sequence: BSU → input modes → reset → terminal colors → scrollback + screen → cursor → ESU
 	s.mu.Lock()
 	s.drainScreenLocked()
 	renderStart := time.Now()
 	modeSeq := s.terminalModeReplayLocked()
+	colorSeq := s.terminalColors.backgroundReplaySeq()
 	snapshot := renderScreen(s.screen)
 	cursorSeq := "\x1b[?25h" // show cursor (default)
 	if s.cursorHidden {
@@ -883,7 +885,7 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	bsu := "\x1b[?2026h"                     // Begin Synchronized Update
 	resetSeq := "\x1b[r\x1b[H\x1b[2J\x1b[3J" // Reset scroll region + cursor home + erase display + erase scrollback
 	esu := "\x1b[?2026l"                     // End Synchronized Update
-	frame := []byte(bsu + modeSeq + resetSeq + snapshot + cursorPos + cursorSeq + esu)
+	frame := []byte(bsu + modeSeq + resetSeq + colorSeq + snapshot + cursorPos + cursorSeq + esu)
 	s.perf.observeSnapshotRender(len(frame), time.Since(renderStart))
 	s.clients[client] = struct{}{}
 	s.lastClientLeft = time.Time{} // reset: we have an active viewer
@@ -1140,6 +1142,7 @@ func (s *Server) readPTY() {
 		// processScreen in the background). Snapshot the client list
 		// atomically so new clients always see their replay frame first.
 		s.mu.Lock()
+		s.terminalColors.write(data)
 		s.screenPending = append(s.screenPending, data...)
 		localOut := s.localOut
 		clients := make([]*wsClient, 0, len(s.clients))

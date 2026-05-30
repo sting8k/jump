@@ -10,6 +10,7 @@ import { DEFAULT_THEME_COLORS, type ResolvedKeybind } from './config'
 import { attachMobileInputHandler } from './mobile-input'
 import { createReplayBuffer } from './replay'
 import { createTerminalIO, type TerminalIOPerfEvent, type TerminalSize } from './terminal-io'
+import { resolvedTerminalBackground, terminalBackgroundFromOsc } from './terminal-colors'
 import { addPageResumeListener } from './page-resume'
 import { decideViewportResize, sameSize } from './terminal-resize'
 import { MOCK_BY_ID } from './mock-data/index'
@@ -273,6 +274,7 @@ export function TerminalView({
   const compositionSuppressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const mobileCopyModeRef = useRef(mobileCopyMode)
   const mobileCopyAnchorRef = useRef<TerminalCell | null>(null)
+  const terminalBackgroundFallbackRef = useRef(resolvedTerminalBackground(terminalOptions))
 
   // True once the terminal's font is downloaded; gates xterm mount.
   // See the preload effect below for why this matters.
@@ -308,6 +310,7 @@ export function TerminalView({
   ctrlArmedRef.current = ctrlArmed
   altArmedRef.current = altArmed
   mobileCopyModeRef.current = mobileCopyMode
+  terminalBackgroundFallbackRef.current = resolvedTerminalBackground(terminalOptions)
 
   const queueResize = useCallback((size: TerminalSize) => {
     termIoRef.current?.requestResize(size, termEpochRef.current)
@@ -319,6 +322,12 @@ export function TerminalView({
 
   const queueMany = useCallback((chunks: Uint8Array[], onWritten?: () => void) => {
     termIoRef.current?.enqueueMany(chunks, termEpochRef.current, onWritten)
+  }, [])
+
+  const applyTerminalBackground = useCallback((background?: string | null) => {
+    const shell = shellRef.current
+    if (!shell) return
+    shell.style.setProperty('--terminal-bg', background?.trim() || terminalBackgroundFallbackRef.current)
   }, [])
 
   const resetResizeEchoGate = useCallback(() => {
@@ -581,6 +590,8 @@ export function TerminalView({
     if (!containerRef.current || USE_MOCK || !fontReady) return
     disposed.current = false
 
+    applyTerminalBackground()
+
     // Add non-serializable options that can't live in JSON config.
     const term = new Terminal({
       ...terminalOptions,
@@ -599,6 +610,15 @@ export function TerminalView({
     // XTGETTCAP can be treated as image data and leave xterm's write callback
     // stuck, keeping the Web UI on Vim's alternate screen until refresh.
     const xtGetTcapDisposable = term.parser.registerDcsHandler({ intermediates: '+', final: 'q' }, () => true)
+    const oscBackgroundDisposable = term.parser.registerOscHandler(11, (data) => {
+      const background = terminalBackgroundFromOsc(data)
+      if (background) applyTerminalBackground(background)
+      return false
+    })
+    const oscBackgroundRestoreDisposable = term.parser.registerOscHandler(111, () => {
+      applyTerminalBackground()
+      return false
+    })
     // Detect plain-text URLs in terminal output and make them clickable.
     term.loadAddon(new WebLinksAddon())
     term.open(containerRef.current)
@@ -1022,6 +1042,8 @@ export function TerminalView({
       disposePasteHandler()
       disposeMobileHandler()
       xtGetTcapDisposable.dispose()
+      oscBackgroundDisposable.dispose()
+      oscBackgroundRestoreDisposable.dispose()
       osc52Disposable.dispose()
       dataDisposable.dispose()
       scrollDisposable.dispose()
@@ -1052,7 +1074,7 @@ export function TerminalView({
       termRef.current = null
       termIoRef.current = null
     }
-  }, [onCtrlConsumed, onInputReady, fontReady])
+  }, [applyTerminalBackground, onCtrlConsumed, onInputReady, fontReady])
 
   // WebSocket connection (reconnects when session.id changes).
   useEffect(() => {
@@ -1077,6 +1099,7 @@ export function TerminalView({
     setWsState('connecting')
 
     setTermLoading(true)
+    applyTerminalBackground()
 
     function forceReconnect() {
       if (disposed.current) return
@@ -1229,7 +1252,7 @@ export function TerminalView({
       wsRef.current?.close()
       wsRef.current = null
     }
-  }, [fitAndResize, queueData, queueMany, queueResize, releaseResizeEchoGate, resetResizeEchoGate, session.id, fontReady])
+  }, [applyTerminalBackground, fitAndResize, queueData, queueMany, queueResize, releaseResizeEchoGate, resetResizeEchoGate, session.id, fontReady])
 
 
   useEffect(() => {

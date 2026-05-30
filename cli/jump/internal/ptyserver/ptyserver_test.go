@@ -207,6 +207,61 @@ func TestDebugPerfEndpointReportsTerminalStats(t *testing.T) {
 	}
 }
 
+func TestPTYServerReconnectSnapshotReplaysTerminalBackground(t *testing.T) {
+	sockPath := filepath.Join(t.TempDir(), "test.sock")
+
+	srv, err := New(Config{
+		Command:    []string{"bash", "-c", "printf '\\033]11;rgb:12/34/56\\007READY\\n'; sleep 1"},
+		Cwd:        "/tmp",
+		Listener:   mustBindSocket(t, sockPath),
+		SocketPath: sockPath,
+	})
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	defer srv.Shutdown()
+
+	deadline := time.After(3 * time.Second)
+	for {
+		srv.mu.Lock()
+		replaySeq := srv.terminalColors.backgroundReplaySeq()
+		srv.mu.Unlock()
+		if replaySeq == "\x1b]11;rgb:12/34/56\x07" {
+			break
+		}
+		select {
+		case <-deadline:
+			t.Fatalf("timeout waiting for terminal background replay seq, got %q", replaySeq)
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, _, err := websocket.Dial(ctx, "ws://localhost/", &websocket.DialOptions{
+		HTTPClient: &http.Client{
+			Transport: &http.Transport{
+				DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+					return net.Dial("unix", sockPath)
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("dial: %v", err)
+	}
+	defer conn.Close(websocket.StatusNormalClosure, "")
+
+	_, frame, err := conn.Read(ctx)
+	if err != nil {
+		t.Fatalf("read snapshot: %v", err)
+	}
+	if !bytes.Contains(frame, []byte("\x1b]11;rgb:12/34/56\x07")) {
+		t.Fatalf("snapshot did not replay terminal background: %q", string(frame))
+	}
+}
+
 func TestPTYServerResize(t *testing.T) {
 	sockPath := filepath.Join(t.TempDir(), "test.sock")
 
