@@ -62,11 +62,22 @@ const UNIVERSAL_KEYBINDS: Keybind[] = [
   { key: 'ctrl+c', action: 'copyOrInterrupt' },
 ]
 
-/** Linux / Windows defaults. */
-const LINUX_KEYBINDS: Keybind[] = [
+/** Linux / Windows clipboard defaults that macCommandIsCtrl also reuses. */
+const LINUX_CLIPBOARD_KEYBINDS: Keybind[] = [
   { key: 'ctrl+shift+c', action: 'copy' },
   { key: 'ctrl+v',       action: 'paste' },
   { key: 'ctrl+shift+v', action: 'paste' },
+]
+
+/** Linux / Windows edit shortcuts common in desktop terminals. */
+const LINUX_EDIT_KEYBINDS: Keybind[] = [
+  { key: 'ctrl+insert',  action: 'copy' },
+  { key: 'shift+insert', action: 'paste' },
+  { key: 'ctrl+shift+a', action: 'selectAll' },
+]
+
+/** Linux / Windows terminal-input fallbacks for browser-stolen keys. */
+const LINUX_TERMINAL_KEYBINDS: Keybind[] = [
   { key: 'ctrl+alt+t', action: 'sendKeys', args: 'ctrl+t' },
   { key: 'ctrl+alt+n', action: 'sendKeys', args: 'ctrl+n' },
   { key: 'ctrl+alt+w', action: 'sendKeys', args: 'ctrl+w' },
@@ -75,6 +86,13 @@ const LINUX_KEYBINDS: Keybind[] = [
   // gnome-terminal, xterm, and alacritty send.
   { key: 'ctrl+backspace', action: 'sendText', args: '\x08' },
   { key: 'ctrl+delete',    action: 'sendText', args: '\x1b[3;5~' },
+]
+
+/** Linux / Windows defaults. */
+const LINUX_KEYBINDS: Keybind[] = [
+  ...LINUX_CLIPBOARD_KEYBINDS,
+  ...LINUX_EDIT_KEYBINDS,
+  ...LINUX_TERMINAL_KEYBINDS,
 ]
 
 /** macOS defaults. Replicate iTerm2 / macOS Terminal conventions. */
@@ -109,7 +127,7 @@ const MAC_NAVIGATION_KEYBINDS: Keybind[] = [
  */
 function buildDefaults(macCommandIsCtrl: boolean): Keybind[] {
   if (IS_MAC && macCommandIsCtrl) {
-    return [...UNIVERSAL_KEYBINDS, ...LINUX_KEYBINDS, ...MAC_NAVIGATION_KEYBINDS]
+    return [...UNIVERSAL_KEYBINDS, ...LINUX_CLIPBOARD_KEYBINDS, ...LINUX_TERMINAL_KEYBINDS, ...MAC_NAVIGATION_KEYBINDS]
   }
   return [...UNIVERSAL_KEYBINDS, ...(IS_MAC ? MAC_KEYBINDS : LINUX_KEYBINDS)]
 }

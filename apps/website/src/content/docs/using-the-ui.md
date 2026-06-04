@@ -139,8 +139,11 @@ jump ships a complete default keymap. Keys not listed here go straight to the te
 | Shortcut | Action |
 |----------|--------|
 | **Ctrl+Shift+C** | Copy selection to clipboard |
+| **Ctrl+Insert** | Copy selection to clipboard |
 | **Ctrl+V** | Paste from clipboard |
 | **Ctrl+Shift+V** | Paste from clipboard |
+| **Shift+Insert** | Paste from clipboard |
+| **Ctrl+Shift+A** | Select all terminal content |
 | **Ctrl+Alt+T** | Sends Ctrl+T (browser steals Ctrl+T) |
 | **Ctrl+Alt+N** | Sends Ctrl+N (browser steals Ctrl+N) |
 | **Ctrl+Alt+W** | Sends Ctrl+W (browser steals Ctrl+W) |

@@ -140,6 +140,15 @@ describe('resolveKeybinds', () => {
     expect(keys).toContain(IS_MAC ? 'meta+c' : 'ctrl+alt+t')
   })
 
+  it('includes common Linux/Windows edit defaults', () => {
+    if (IS_MAC) return
+    const resolved = resolveKeybinds(null)
+    const byKey = new Map(resolved.map(r => [r.key, r.action]))
+    expect(byKey.get('ctrl+insert')).toBe('copy')
+    expect(byKey.get('shift+insert')).toBe('paste')
+    expect(byKey.get('ctrl+shift+a')).toBe('selectAll')
+  })
+
   it('adds new user keybinds', () => {
     const user: Keybind[] = [
       { key: 'ctrl+alt+n', action: 'sendKeys', args: 'ctrl+n' },
